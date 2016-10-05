@@ -1,6 +1,0 @@
-label:
-.org 100
-.org 0x100
-.wfill 5 0x0000000001
-.align 4
-.word 0x0000000001
