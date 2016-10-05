@@ -3,6 +3,19 @@
 #include "utils.h"
 #include "status.h"
 
+enum typeInstruction {COMMENT = 1, DIRECTIVE, LABEL, COMMAND, ERROR= -1 };
+
+enum typeError {
+    TWO_LABEL_ERROR = 1,
+    COMMAND_AND_DIR_ERROR,
+    DUPLICATE_LABEL_ERROR,
+    INVALID_INSTRUCTION_ERROR,
+    INVALID_PARAMETER_DIR_ERROR,
+    LABEL_AFTER_CMD_DIR_ERROR,
+    INVALID_DIRECTIVE_ERROR,
+    DUPLICATE_SYMBOL_ERROR
+};
+
 typedef struct directive
 {
     /*char* directive;    String da diretiva, por exemplo .org*/

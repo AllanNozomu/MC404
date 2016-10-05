@@ -3,21 +3,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <regex.h>
-#include "directive.h"
+#include "assembler.h"
 
 #define LINE_SIZE 256
-
-enum typeInstruction {COMMENT = 1, DIRECTIVE, LABEL, COMMAND, ERROR= -1 };
-
-enum typeError {
-    TWO_LABEL_ERROR = 1,
-    COMMAND_AND_DIR_ERROR,
-    DUPLICATE_LABEL_ERROR,
-    INVALID_INSTRUCTION_ERROR,
-    INVALID_PARAMETER_DIR_ERROR,
-    LABEL_AFTER_CMD_DIR_ERROR,
-    INVALID_DIRECTIVE_ERROR
-};
 
 /*
 checkInstruction
@@ -44,7 +32,7 @@ int checkInstruction(char *instruction)
         retorno = DIRECTIVE;
 
     /*Verifica se eh formada por caracteres e '_', comentario*/
-    regcomp(&regex, "[^a-z_A-Z]+:$", REG_EXTENDED|REG_NOSUB);
+    regcomp(&regex, "^[a-z_A-Z]+:$", REG_EXTENDED|REG_NOSUB);
     if (!regexec(&regex, instruction, 0, NULL, 0))
         retorno = LABEL;
 
@@ -54,7 +42,6 @@ int checkInstruction(char *instruction)
         retorno = COMMAND;
 
     regfree(&regex);
-    printf("Instruction Id: %d\n", retorno);
     return retorno;
 }
 
@@ -87,8 +74,7 @@ int main(int argc, char *argv[])
     int lineCounter = 0;
     while( fgets (line, LINE_SIZE, in) != NULL )
     {
-        printf("STATUS--------------\nActualLine: %ld left %d\n", status.actualLine, status.left);
-        printf("Line %d-------------\n%s", ++lineCounter, line);
+        printf("Line %d %s", ++lineCounter, line);
         char *token = strtok(line, " \n");
         status.label = status.cmdOrDir = status.error = 0;
         while (token != NULL)
@@ -119,7 +105,7 @@ int main(int argc, char *argv[])
                         Directive d = checkDirective(token);
                         if (d.numParameters < 0)
                             status.error = INVALID_DIRECTIVE_ERROR;
-                        else 
+                        else
                         {
                             char* parameters[2];
                             for (int i = 0 ; i < d.numParameters; ++i){
@@ -140,10 +126,10 @@ int main(int argc, char *argv[])
                     else
                     {
                         status.label = 1;
-                        Node* labelNode = getNode(token, &status);
+                        LabelNode* labelNode = getLabelNode(token, status.listLabels);
                         if (labelNode == NULL)
                         {
-                            status.listLabels = addNode(token, status.actualLine, status.left, &status);
+                            status.listLabels = addLabelNode(token, status.actualLine, status.left, status.listLabels);
                         }
                         else
                         {
@@ -184,12 +170,13 @@ int main(int argc, char *argv[])
                     break;
                 }
             }
+            printStatus(status);
             token = strtok(NULL, " \n");
         }
 
     }
-    printf("STATUS--------------\nActualLine: %ld left %d\n", status.actualLine, status.left);
-    freeNodes(status.listLabels);
+    freeLabelNodes(status.listLabels);
+    freeSymbolNodes(status.listSymbols);
 
     fclose(in);
 
