@@ -10,6 +10,7 @@ int isDecimal1024(char* str);
 int isDecimal(char* str);
 int isDecimalNegative(char* str);
 int isHexadecimalNumber(char* str);
+int isHexadecimalNumber1024(char* str);
 int isLabel(char* str);
 int isSymbol(char* str);
 int isComment(char* str);

@@ -42,7 +42,7 @@ void printLabels(LabelNode* now)
         printf("NULL\n");
         return;
     }
-    printf("%s %d %s -> ", now->label.labelText, now->label.lineNumber, (now->label.left ? "Left" : "Rigth"));
+    printf("%s %ld %s -> ", now->label.labelText, now->label.lineNumber, (now->label.left ? "Left" : "Rigth"));
     printLabels(now->next);
 }
 

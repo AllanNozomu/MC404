@@ -7,7 +7,7 @@
 typedef struct label
 {
     char labelText[65];
-    int lineNumber;
+    long lineNumber;
     int left;
 } Label;
 

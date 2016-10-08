@@ -23,6 +23,8 @@ void initialize(Status* status);
 /*incStatus = Avanca o contador do lado esquerdo ou direito da palavra e a linha
 atual caso esteja na direita
 status  = Status a ser montador a ser modificado*/
+void addMemory(Status* status, char* memory, int index);
+
 void incStatus(Status* status);
 
 void printStatus(Status status);

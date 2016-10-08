@@ -105,41 +105,209 @@ Directive checkDirective(char *command)
 {
     if (!strcmp(command, ".org")){
         Directive retorno;
-        // retorno.directive = ".org";
         retorno.numParameters = 1;
         retorno.function = &orgDirective;
         return retorno;
     }
     else if (!strcmp(command, ".wfill")){
         Directive retorno;
-        // retorno.directive = ".org";
         retorno.numParameters = 2;
         retorno.function = &wfillDirective;
         return retorno;
     }
     else if (!strcmp(command, ".set")){
         Directive retorno;
-        // retorno.directive = ".org";
         retorno.numParameters = 2;
         retorno.function = &setDirective;
         return retorno;
     }
     else if (!strcmp(command, ".word")){
         Directive retorno;
-        // retorno.directive = ".org";
         retorno.numParameters = 1;
         retorno.function = &wordDirective;
         return retorno;
     }
     else if (!strcmp(command, ".align")){
         Directive retorno;
-        // retorno.directive = ".org";
         retorno.numParameters = 1;
         retorno.function = &alignDirective;
         return retorno;
     }
     Directive retorno;
-    // retorno.directive = ".org";
     retorno.numParameters = -1;
     return retorno;
+}
+
+int checkCommand(char *command, Status* status)
+{
+    if (!strcmp(command, "LD"))
+    {
+        char* param = strtok(NULL, " \n");
+        addMemory(status, "01", 0);
+        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+    }
+    else if (!strcmp(command, "LD-"))
+    {
+        char* param = strtok(NULL, " \n");
+        addMemory(status, "02", 0);
+        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+    }
+    else if (!strcmp(command, "LD|"))
+    {
+        char* param = strtok(NULL, " \n");
+        addMemory(status, "03", 0);
+        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+    }
+    else if (!strcmp(command, "LDmq"))
+    {
+        addMemory(status, "0A", 0);
+    }
+    else if (!strcmp(command, "LDmq_mx"))
+    {
+        addMemory(status, "09", 0);
+    }
+
+
+    else if (!strcmp(command, "ST"))
+    {
+        char* param = strtok(NULL, " \n");
+        addMemory(status, "21", 0);
+        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+    }
+
+
+    else if (!strcmp(command, "JMP"))
+    {
+        char* param = strtok(NULL, " \n");
+        checkInstructionParameter(param, status, JUMP);
+    }
+    else if (!strcmp(command, "JUMP+"))
+    {
+        char* param = strtok(NULL, " \n");
+        checkInstructionParameter(param, status, JUMP_PLUS);
+    }
+
+
+    else if (!strcmp(command, "ADD"))
+    {
+        char* param = strtok(NULL, " \n");
+        addMemory(status, "05", 0);
+        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+    }
+    else if (!strcmp(command, "ADD|"))
+    {
+        char* param = strtok(NULL, " \n");
+        addMemory(status, "07", 0);
+        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+    }
+    else if (!strcmp(command, "SUB"))
+    {
+        char* param = strtok(NULL, " \n");
+        addMemory(status, "06", 0);
+        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+    }
+    else if (!strcmp(command, "SUB|"))
+    {
+        char* param = strtok(NULL, " \n");
+        addMemory(status, "08", 0);
+        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+    }
+    else if (!strcmp(command, "MUL|"))
+    {
+        char* param = strtok(NULL, " \n");
+        addMemory(status, "0B", 0);
+        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+    }
+    else if (!strcmp(command, "DIV"))
+    {
+        char* param = strtok(NULL, " \n");
+        addMemory(status, "0C", 0);
+        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+    }
+    else if (!strcmp(command, "LSH"))
+    {
+        addMemory(status, "14", 0);
+    }
+    else if (!strcmp(command, "RSH"))
+    {
+        addMemory(status, "15", 0);
+    }
+
+    else if (!strcmp(command, "STaddr"))
+    {
+        char* param = strtok(NULL, " \n");
+        checkInstructionParameter(param, status, STRADDR);
+    }
+    incStatus(status);
+}
+
+int checkInstructionParameter(char* param ,Status* status, int type )
+{
+    regex_t regex;
+    regmatch_t groupArray[2];
+    regcomp(&regex, "\\\"([a-z_A-Z0-9]+)\\\"", REG_EXTENDED);
+    if (!regexec(&regex, param, 2, groupArray, REG_NOTBOL))
+    {
+        char paramResult[strlen(param) + 2];
+        int len = groupArray[1].rm_eo - groupArray[1].rm_so;
+        memcpy(paramResult, param + groupArray[1].rm_so, len);
+        regfree(&regex);
+
+        char string[11];
+        if (isDecimalNegative(paramResult) || isHexadecimalNumber1024(paramResult))
+        {
+            long lineAux = strtol(paramResult, NULL, 0);
+            sprintf (string, "%03lX", lineAux);
+            switch (type) {
+                case JUMP:
+                    addMemory(status, "0D", 0);
+                break;
+                case JUMP_PLUS:
+                    addMemory(status, "0F", 0);
+                break;
+                case STRADDR:
+                    addMemory(status, "12", 0);
+                break;
+            }
+        }
+        else
+        {
+            strcat(paramResult, ":");
+
+            LabelNode* node = getLabelNode(paramResult, status->listLabels);
+            if (node == NULL)
+                return -1;
+            sprintf (string, "%03lX", node->label.lineNumber);
+            if (node->label.left)
+                switch (type) {
+                    case JUMP:
+                        addMemory(status, "0D", 0);
+                    break;
+                    case JUMP_PLUS:
+                        addMemory(status, "0F", 0);
+                    break;
+                    case STRADDR:
+                        addMemory(status, "12", 0);
+                    break;
+                }
+            else
+                switch (type) {
+                    case JUMP:
+                        addMemory(status, "0E", 0);
+                    break;
+                    case JUMP_PLUS:
+                        addMemory(status, "10", 0);
+                    break;
+                    case STRADDR:
+                        addMemory(status, "13", 0);
+                    break;
+                }
+        }
+        for (int j = 0; j < 3; ++j)
+            status->memoryMap[(int)status->actualLine][(status->left ? 2 : 7) + j] = string[j];
+    }
+    else
+        regfree(&regex);
+
+    return -1;
 }

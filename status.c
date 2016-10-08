@@ -22,6 +22,16 @@ void incStatus(Status* status)
     status->left = !status->left;
 }
 
+void addMemory(Status* status, char* memory, int index)
+{
+    int len = strlen(memory);
+    for (int i = 0 ; i < len; ++i)
+    {
+        status->memoryMap[(int)status->actualLine][(status->left ?
+             0 : 5) + index + i] = memory[i];
+    }
+}
+
 void printStatus(Status status)
 {
     printf("STATUS----------------------\n");
@@ -34,14 +44,14 @@ void printStatus(Status status)
 
     for (int i= 0 ; i < 1024; ++i)
     {
-        if (status.memoryMap[i][0] != ' ')
+        if (status.memoryMap[i][0] != ' ' || status.memoryMap[i][5] != ' ')
         {
             printf("%03d", i);
             for (int j = 0; j < 10; ++j)
             {
                 if (!(j % 2))
                     printf(" ");
-                printf("%c", status.memoryMap[i][j]);
+                printf("%c", (status.memoryMap[i][j] == ' ' ? '0' : status.memoryMap[i][j] ));
             }
             printf("\n");
         }

@@ -81,22 +81,25 @@ int main(int argc, char *argv[])
         {
             switch (checkInstruction(token)){
                 case COMMENT:
+                    printf("COMENTARIO %s\n", token);
                     do
-                        token = strtok(NULL, "");
+                        token = strtok(NULL, "\n");
                     while (token != NULL);
                     break;
 
                 case COMMAND:
+                    printf("COMANDO %s\n", token);
                     if (status.cmdOrDir)
                         status.error = COMMAND_AND_DIR_ERROR;
                     else
                     {
                         status.cmdOrDir = 1;
-                        incStatus(&status);
+                        checkCommand(token, &status);
                     }
                     break;
 
                 case DIRECTIVE:
+                    printf("DIRETIVA %s\n", token);
                     if (status.cmdOrDir)
                         status.error = COMMAND_AND_DIR_ERROR;
                     else
@@ -119,6 +122,7 @@ int main(int argc, char *argv[])
                     break;
 
                 case LABEL:
+                    printf("LABEL %s\n", token);
                     if (status.label)
                         status.error = TWO_LABEL_ERROR;
                     else if (status.cmdOrDir)

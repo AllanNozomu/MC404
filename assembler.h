@@ -5,6 +5,8 @@
 
 enum typeInstruction {COMMENT = 1, DIRECTIVE, LABEL, COMMAND, ERROR= -1 };
 
+enum SpecialInstruction {NORMAL_INSTRUCTION = 0, JUMP, JUMP_PLUS, STRADDR};
+
 enum typeError {
     TWO_LABEL_ERROR = 1,
     COMMAND_AND_DIR_ERROR,
@@ -34,13 +36,12 @@ param[]     No caso, so vai ser usado um parametro, a linha que deseja mudar
 
 return int  Erro ou sucesso*/
 int orgDirective(Status* status, char* param[]);
-
 int setDirective(Status* status, char* param[]);
-
 int alignDirective(Status* status, char* param[]);
-
 int wfillDirective(Status* status, char* param[]);
-
 int wordDirective(Status* status, char* param[]);
 
 Directive checkDirective(char *command);
+
+int checkCommand(char *command, Status* status);
+int checkInstructionParameter(char* param ,Status* status, int type);
