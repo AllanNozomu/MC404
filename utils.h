@@ -14,4 +14,5 @@ int isHexadecimalNumber1024(char* str);
 int isLabel(char* str);
 int isSymbol(char* str);
 int isComment(char* str);
+int isCommand(char* str);
 int isDirective(char* str);

@@ -17,32 +17,19 @@ return int        = retorna um inteiro do typeInstruction referente ao tipo de
 */
 int checkInstruction(char *instruction)
 {
-    regex_t regex;
+    if (isComment(instruction))
+        return COMMENT;
 
-    int retorno = ERROR;
-    /*Tratamento com Regular Expressions*/
-    /*Verifica se comeca com '#', um comentario*/
-    regcomp(&regex, "^#", REG_EXTENDED|REG_NOSUB);
-    if (!regexec(&regex, instruction, 0, NULL, 0))
-        retorno = COMMENT;
+    if (isDirective(instruction))
+        return DIRECTIVE;
 
-    /*Verifica se comeca com '.' e por letras minusculas, diretiva*/
-    regcomp(&regex, "^\\.[a-z]+$", REG_EXTENDED|REG_NOSUB);
-    if (!regexec(&regex, instruction, 0, NULL, 0))
-        retorno = DIRECTIVE;
+    if (isLabel(instruction))
+        return LABEL;
 
-    /*Verifica se eh formada por caracteres e '_', comentario*/
-    regcomp(&regex, "^[a-z_A-Z]+:$", REG_EXTENDED|REG_NOSUB);
-    if (!regexec(&regex, instruction, 0, NULL, 0))
-        retorno = LABEL;
+    if (isCommand(instruction))
+        return COMMAND;
 
-    /*Verifica se comeca com letra maiuscula, comando*/
-    regcomp(&regex, "^[A-Z]", REG_EXTENDED|REG_NOSUB);
-    if (!regexec(&regex, instruction, 0, NULL, 0))
-        retorno = COMMAND;
-
-    regfree(&regex);
-    return retorno;
+    return ERROR;
 }
 
 int main(int argc, char *argv[])

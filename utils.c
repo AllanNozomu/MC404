@@ -115,6 +115,17 @@ int isComment(char* str)
     return retorno;
 }
 
+int isCommand(char* str)
+{
+    regex_t regex;
+
+    regcomp(&regex, "^[A-Z][a-zA-Z]+$", REG_EXTENDED|REG_NOSUB);
+    int retorno = !regexec(&regex, str, 0, NULL, 0);
+    regfree(&regex);
+
+    return retorno;
+}
+
 int isDirective(char* str)
 {
     regex_t regex;

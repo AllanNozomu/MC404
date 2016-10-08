@@ -13,10 +13,10 @@ int setDirective(Status* status, char* param[])
 {
     if (isSymbol(param[0]))
         if (isHexadecimalNumber(param[1]) || isDecimal(param[1])){
-            SymbolNode* symbolNode = getSymbolNode(param[1], status->listSymbols);
-            long value = strtol(param[0], NULL, 0);
+            SymbolNode* symbolNode = getSymbolNode(param[0], status->listSymbols);
+            long value = strtol(param[1], NULL, 0);
             if (symbolNode == NULL)
-                status->listSymbols = addSymbolNode(param[1], value, status->listSymbols);
+                status->listSymbols = addSymbolNode(param[0], value, status->listSymbols);
             else
             {
                 if (symbolNode->symbol.value < 0)
@@ -24,7 +24,6 @@ int setDirective(Status* status, char* param[])
                 else
                     status->error = DUPLICATE_SYMBOL_ERROR;
             }
-
             return 1;
         }
     return -1;
@@ -61,7 +60,8 @@ int wfillDirective(Status* status, char* param[])
         }
         else if (isSymbol(param[1]))
         {
-
+            SymbolNode* node = getSymbolNode(param[1], status->listSymbols);
+            sprintf (string, "%010lX", node->symbol.value);
         }
         else
             return -1;
@@ -80,24 +80,25 @@ int wordDirective(Status* status, char* param[])
     char string[11];
     if (isDecimal(param[0]) || isHexadecimalNumber(param[0]))
     {
-        long param1 = strtol(param[1], NULL, 0);
+        long param1 = strtol(param[0], NULL, 0);
         sprintf (string, "%010lX", param1);
     }
     else if (isLabel(param[0]))
     {
-        LabelNode* node = getLabelNode(param[1], status->listLabels);
+        LabelNode* node = getLabelNode(param[0], status->listLabels);
         for (int i = 0; i < 10; ++i)
             string[i] = status->memoryMap[node->label.lineNumber][i];
     }
     else if (isSymbol(param[0]))
     {
-
+        SymbolNode* node = getSymbolNode(param[0], status->listSymbols);
+        sprintf (string, "%010lX", node->symbol.value);
     }
     else
         return -1;
 
-    for (int j = 0; j < 10; ++j)
-        status->memoryMap[(int)status->actualLine][j] = string[j];
+    for (int i = 0; i < 10; ++i)
+        status->memoryMap[(int)status->actualLine][i] = string[i];
     ++(status->actualLine);
 }
 
