@@ -15,26 +15,10 @@ char* instruction = instrucao a ser analisada, pode ser um label, uma diretica,
 return int        = retorna um inteiro do typeInstruction referente ao tipo de
                     instrucao passada como parametro
 */
-int checkInstruction(char *instruction)
-{
-    if (isComment(instruction))
-        return COMMENT;
-
-    if (isDirective(instruction))
-        return DIRECTIVE;
-
-    if (isLabel(instruction))
-        return LABEL;
-
-    if (isCommand(instruction))
-        return COMMAND;
-
-    return ERROR;
-}
 
 int main(int argc, char *argv[])
 {
-    FILE *in, *out;
+    FILE *in = NULL, *out = NULL;
     char line[LINE_SIZE];
 
     switch (argc)
@@ -57,120 +41,38 @@ int main(int argc, char *argv[])
 
     Status status;
     initialize(&status);
-
-    int lineCounter = 0;
-    while( fgets (line, LINE_SIZE, in) != NULL )
+    int success = 1;
+    int lineNumber = 1;
+    while( fgets (line, LINE_SIZE, in) != NULL && success >= 0)
     {
-        printf("Line %d %s", ++lineCounter, line);
-        char *token = strtok(line, " \n");
-        status.label = status.cmdOrDir = status.error = 0;
-        while (token != NULL)
-        {
-            switch (checkInstruction(token)){
-                case COMMENT:
-                    printf("COMENTARIO %s\n", token);
-                    do
-                        token = strtok(NULL, "\n");
-                    while (token != NULL);
-                    break;
-
-                case COMMAND:
-                    printf("COMANDO %s\n", token);
-                    if (status.cmdOrDir)
-                        status.error = COMMAND_AND_DIR_ERROR;
-                    else
-                    {
-                        status.cmdOrDir = 1;
-                        checkCommand(token, &status);
-                    }
-                    break;
-
-                case DIRECTIVE:
-                    printf("DIRETIVA %s\n", token);
-                    if (status.cmdOrDir)
-                        status.error = COMMAND_AND_DIR_ERROR;
-                    else
-                    {
-                        status.cmdOrDir = 1;
-                        Directive d = checkDirective(token);
-                        if (d.numParameters < 0)
-                            status.error = INVALID_DIRECTIVE_ERROR;
-                        else
-                        {
-                            char* parameters[2];
-                            for (int i = 0 ; i < d.numParameters; ++i){
-                                parameters[i] = strtok(NULL, " \n");
-                            }
-                            int success = d.function(&status, parameters);
-                            if (success < 0)
-                                status.error = INVALID_PARAMETER_DIR_ERROR;
-                        }
-                    }
-                    break;
-
-                case LABEL:
-                    printf("LABEL %s\n", token);
-                    if (status.label)
-                        status.error = TWO_LABEL_ERROR;
-                    else if (status.cmdOrDir)
-                        status.error =  LABEL_AFTER_CMD_DIR_ERROR;
-                    else
-                    {
-                        status.label = 1;
-                        LabelNode* labelNode = getLabelNode(token, status.listLabels);
-                        if (labelNode == NULL)
-                        {
-                            status.listLabels = addLabelNode(token, status.actualLine, status.left, status.listLabels);
-                        }
-                        else
-                        {
-                            if (labelNode->label.lineNumber < 0 && labelNode->label.left < 0)
-                            {
-                                labelNode->label.lineNumber = status.actualLine;
-                                labelNode->label.left = status.left;
-                            } else
-                                status.error = DUPLICATE_LABEL_ERROR;
-                        }
-                    }
-                break;
-                case ERROR:
-                    status.error = INVALID_INSTRUCTION_ERROR;
-                break;
-            }
-            if (status.error)
-            {
-                switch(status.error)
-                {
-                    case TWO_LABEL_ERROR:
-                        printf("Can't have two or more labels in a line.\n");
-                    break;
-                    case COMMAND_AND_DIR_ERROR:
-                        printf("Can't have more than one Command or Directive in a line.\n");
-                    break;
-                    case DUPLICATE_LABEL_ERROR:
-                        printf("This label has already been declared.\n");
-                    break;
-                    case INVALID_INSTRUCTION_ERROR:
-                        printf("Expecting a valid label, command or directive\n");
-                    break;
-                    case INVALID_PARAMETER_DIR_ERROR:
-                        printf("Invalid parameter passed to directive\n");
-                    break;
-                    case LABEL_AFTER_CMD_DIR_ERROR:
-                        printf("Can't define a label after a command or directive\n");
-                    break;
-                }
-            }
-            printStatus(status);
-            token = strtok(NULL, " \n");
-        }
-
+        success = checkLine(line, &status, lineNumber++);
     }
-    freeLabelNodes(status.listLabels);
-    freeSymbolNodes(status.listSymbols);
+    if (success > 0){
+        status.firstTime = 0;
+        status.actualLine = 0;
+        status.left = 1;
+        int lineNumber = 1;
+        if (in != NULL)
+        {
+            fclose(in);
+            in = fopen (argv[1], "r");
+        }
+        // printStatus(status);
+        // printf("\n\nSEGUNDA LEITURA\n\n");
 
-    fclose(in);
+        while( fgets (line, LINE_SIZE, in) != NULL && success >= 0)
+        {
+            success = checkLine(line, &status, lineNumber++);
+        }
+    }
+    if (success >= 0)
+        printStatus(status);
+    freeStatus(status);
 
+    if (in != NULL)
+        fclose(in);
+    if (out != NULL)
+        fclose(out);
 
     return(0);
 }

@@ -7,6 +7,7 @@ typedef struct status
 {
     long actualLine;    /*Linha do montador*/
     int left;           /*Posicao atual da linha (direita ou esquerda)*/
+    int firstTime;
 
     char memoryMap[1024][10];
 
@@ -28,3 +29,5 @@ void addMemory(Status* status, char* memory, int index);
 void incStatus(Status* status);
 
 void printStatus(Status status);
+
+void freeStatus(Status status);

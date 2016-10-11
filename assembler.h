@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "utils.h"
 #include "status.h"
 
@@ -27,6 +28,9 @@ typedef struct directive
                                             status do montador e parametros da
                                             diretiva */
 } Directive;
+
+int checkInstruction(char *instruction);
+int checkLine(char* line, Status* status, int lineNumber);
 
 /*METHODS*/
 

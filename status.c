@@ -4,9 +4,11 @@ void initialize(Status* status)
 {
     status->actualLine = 0;
     status->left = 1;
+    status->firstTime =1;
     status->error = 0;
     status->listLabels = NULL;
     status->listSymbols = NULL;
+
     for (int i = 0 ; i < 1024; ++i)
         for (int j = 0 ; j < 10; ++j)
             status->memoryMap[i][j] = ' ';
@@ -34,19 +36,19 @@ void addMemory(Status* status, char* memory, int index)
 
 void printStatus(Status status)
 {
-    printf("STATUS----------------------\n");
-    printf("ActualLine: %ld  orientation: %s\n", status.actualLine, (status.left ? "Left" : "Right"));
-    printf("Labels: ");
-    printLabels(status.listLabels);
-    printf("Symbols: ");
-    printSymbols(status.listSymbols);
-    printf("Memory Map: \n");
+    // printf("STATUS----------------------\n");
+    // printf("ActualLine: %ld  orientation: %s\n", status.actualLine, (status.left ? "Left" : "Right"));
+    // printf("Labels: ");
+    // printLabels(status.listLabels);
+    // printf("Symbols: ");
+    // printSymbols(status.listSymbols);
+    // printf("Memory Map: \n");
 
     for (int i= 0 ; i < 1024; ++i)
     {
         if (status.memoryMap[i][0] != ' ' || status.memoryMap[i][5] != ' ')
         {
-            printf("%03d ", i);
+            printf("%03X ", i);
             printf("%c%c %c%c%c %c%c %c%c%c\n",
                 status.memoryMap[i][0] == ' ' ? '0' : status.memoryMap[i][0],
                 status.memoryMap[i][1] == ' ' ? '0' : status.memoryMap[i][1],
@@ -61,5 +63,10 @@ void printStatus(Status status)
             );
         }
     }
-    printf("----------------------------\n");
+    // printf("----------------------------\n");
+}
+
+void freeStatus(Status status){
+    freeLabelNodes(status.listLabels);
+    freeSymbolNodes(status.listSymbols);
 }
