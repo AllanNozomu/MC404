@@ -42,16 +42,17 @@ int main(int argc, char *argv[])
     Status status;
     initialize(&status);
     int success = 1;
-    int lineNumber = 1;
-    while( fgets (line, LINE_SIZE, in) != NULL && success >= 0)
-    {
-        success = checkLine(line, &status, lineNumber++);
+    int lineNumber = 0;
+    while( fgets (line, LINE_SIZE, in) != NULL && success >= 0){
+        success = checkLine(line, &status);
+        ++lineNumber;
     }
+
     if (success > 0){
         status.firstTime = 0;
         status.actualLine = 0;
         status.left = 1;
-        int lineNumber = 1;
+        int lineNumber = 0;
         if (in != NULL)
         {
             fclose(in);
@@ -60,13 +61,17 @@ int main(int argc, char *argv[])
         // printStatus(status);
         // printf("\n\nSEGUNDA LEITURA\n\n");
 
-        while( fgets (line, LINE_SIZE, in) != NULL && success >= 0)
-        {
-            success = checkLine(line, &status, lineNumber++);
+        while( fgets (line, LINE_SIZE, in) != NULL && success >= 0){
+            success = checkLine(line, &status);
+            ++lineNumber;
         }
     }
+
     if (success >= 0)
-        printStatus(status);
+        printStatus(status, out);
+    else
+        printError(status, lineNumber, out);
+
     freeStatus(status);
 
     if (in != NULL)

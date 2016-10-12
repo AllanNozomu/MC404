@@ -17,7 +17,7 @@ int checkInstruction(char *instruction)
     return ERROR;
 }
 
-int checkLine(char* line, Status* status, int lineNumber)
+int checkLine(char* line, Status* status)
 {
     // printf("Line %s", line);
     char *token = strtok(line, " \n");
@@ -99,54 +99,32 @@ int checkLine(char* line, Status* status, int lineNumber)
                 status->error = INVALID_INSTRUCTION_ERROR;
             break;
         }
-        if (status->error)
-        {
-            printf("ERROR on line %d\n",lineNumber);
-            switch(status->error)
-            {
-                case TWO_LABEL_ERROR:
-                    printf("Can't have two or more labels in a line.\n");
-                break;
-                case COMMAND_AND_DIR_ERROR:
-                    printf("Can't have more than one Command or Directive in a line.\n");
-                break;
-                case DUPLICATE_LABEL_ERROR:
-                    printf("This label has already been declared.\n");
-                break;
-                case INVALID_INSTRUCTION_ERROR:
-                    printf("Expecting a valid label, command or directive\n");
-                break;
-                case INVALID_PARAMETER_DIR_ERROR:
-                    printf("Invalid parameter passed to directive\n");
-                break;
-                case LABEL_AFTER_CMD_DIR_ERROR:
-                    printf("Can't define a label after a command or directive\n");
-                break;
-            }
+        if (status->error > 0)
             return -1;
-        }
+
         token = strtok(NULL, " \n");
     }
     return 1;
 }
 
-int orgDirective(Status* status, char* param[])
+void orgDirective(Status* status, char* param[])
 {
     if (isHexadecimalNumber(param[0]) || isDecimal1024(param[0])){
         status->actualLine = strtol(param[0], NULL, 0);
         status->left = 1;
-        return 0;
+        return;
     }
-    return -1;
+    status->error = INVALID_PARAMETER_DIR_ERROR;
 }
-int setDirective(Status* status, char* param[])
+
+void setDirective(Status* status, char* param[])
 {
     if (!status->firstTime)
-        return 0;
+        return;
     if (isSymbol(param[0]))
         if (isHexadecimalNumber(param[1]) || isDecimal(param[1])){
             SymbolNode* symbolNode = getSymbolNode(param[0], status->listSymbols);
-            long value = strtol(param[1], NULL, 0);
+            int value = (int)strtol(param[1], NULL, 0);
             if (symbolNode == NULL)
                 status->listSymbols = addSymbolNode(param[0], value, status->listSymbols);
             else
@@ -157,46 +135,46 @@ int setDirective(Status* status, char* param[])
                     status->error = DUPLICATE_SYMBOL_ERROR;
                 }
             }
-            return 0;
+            return;
         }
     status->error = INVALID_PARAMETER_DIR_ERROR;
 }
 
-int alignDirective(Status* status, char* param[])
+void alignDirective(Status* status, char* param[])
 {
     if (isDecimal1024(param[0])){
         int resto = status->actualLine % strtol(param[0], NULL, 0);
         status->actualLine = status->actualLine + resto;
         status->left = 1;
-        return 0;
+        return;
     }
     status->error = INVALID_PARAMETER_DIR_ERROR;
 }
 
-int wfillDirective(Status* status, char* param[])
+void wfillDirective(Status* status, char* param[])
 {
     if (isDecimal1024(param[0]))
     {
-        long qty = strtol(param[0], NULL, 0);
+        int qty = (int)strtol(param[0], NULL, 0);
         char string[11];
         if (!status->firstTime)
         {
             if (isDecimalNegative(param[1]) || isHexadecimalNumber(param[1]))
             {
-                long param1 = strtol(param[1], NULL, 0);
-                sprintf (string, "%010lX", param1);
+                int param1 = (int)strtol(param[1], NULL, 0);
+                sprintf (string, "%010X", param1);
             }
             else
             {
                 LabelNode* labelNode = getLabelNode(param[1], status->listLabels);
                 if (labelNode != NULL)
                     for (int i = 0; i < 10; ++i)
-                        sprintf (string, "%010lX", labelNode->label.lineNumber);
+                        sprintf (string, "%010X", labelNode->label.lineNumber);
                 else
                 {
                     SymbolNode* symbolNode = getSymbolNode(param[1], status->listSymbols);
                     if (symbolNode != NULL)
-                        sprintf (string, "%010lX", symbolNode->symbol.value);
+                        sprintf (string, "%010X", symbolNode->symbol.value);
                     else
                         status->error = INVALID_PARAMETER_DIR_ERROR;
                 }
@@ -208,32 +186,32 @@ int wfillDirective(Status* status, char* param[])
                 }
             }
         status->actualLine += qty;
-        return 0;
+        return;
     }
     status->error = INVALID_PARAMETER_DIR_ERROR;
 }
 
-int wordDirective(Status* status, char* param[])
+void wordDirective(Status* status, char* param[])
 {
     if (!status->firstTime)
     {
         char string[11];
         if (isDecimal(param[0]) || isHexadecimalNumber(param[0]))
         {
-            long param1 = strtol(param[0], NULL, 0);
-            sprintf (string, "%010lX", param1);
+            int param1 = (int)strtol(param[0], NULL, 0);
+            sprintf (string, "%010X", param1);
         }
         else
         {
             LabelNode* labelNode = getLabelNode(param[0], status->listLabels);
             if (labelNode != NULL)
                 for (int i = 0; i < 10; ++i)
-                    sprintf (string, "%010lX", labelNode->label.lineNumber);
+                    sprintf (string, "%010X", labelNode->label.lineNumber);
             else
             {
                 SymbolNode* symbolNode = getSymbolNode(param[0], status->listSymbols);
                 if (symbolNode != NULL)
-                    sprintf (string, "%010lX", symbolNode->symbol.value);
+                    sprintf (string, "%010X", symbolNode->symbol.value);
                 else
                     status->error = INVALID_PARAMETER_DIR_ERROR;
             }
@@ -243,7 +221,7 @@ int wordDirective(Status* status, char* param[])
             status->memoryMap[(int)status->actualLine][i] = string[i];
     }
     ++(status->actualLine);
-    return 0;
+    return;
 }
 
 Directive checkDirective(char *command)
@@ -283,7 +261,7 @@ Directive checkDirective(char *command)
     return retorno;
 }
 
-int checkCommand(char *command, Status* status)
+void checkCommand(char *command, Status* status)
 {
     if (!strcmp(command, "LDmq"))
         addMemory(status, "0A", 0);
@@ -363,25 +341,29 @@ int checkCommand(char *command, Status* status)
         checkInstructionParameter(param, status, STRADDR);
 }
 
-int checkInstructionParameter(char* param ,Status* status, int type )
+void checkInstructionParameter(char* param ,Status* status, int type )
 {
     if (status->firstTime)
-        return 0;
+        return;
     regex_t regex;
-    regmatch_t groupArray[2];
-    regcomp(&regex, "\\\"([a-z_A-Z0-9]+)\\\"", REG_EXTENDED);
-    if (!regexec(&regex, param, 2, groupArray, REG_NOTBOL))
-    {
-        char paramResult[strlen(param) + 2];
-        int len = groupArray[1].rm_eo - groupArray[1].rm_so;
-        memcpy(paramResult, param + groupArray[1].rm_so, len);
-        regfree(&regex);
 
-        char string[11];
+    regcomp(&regex, "^\\\"[a-z_A-Z0-9]+\\\"$", REG_EXTENDED|REG_NOSUB);
+    int retorno = !regexec(&regex, param, 0, NULL, 0);
+    regfree(&regex);
+    if (retorno)
+    {
+        char paramResult[strlen(param) - 1];
+        int i;
+        for (i = 0; i < strlen(param) - 2; ++i)
+            paramResult[i] = *(param + i + 1);
+        paramResult[i] = '\0';
+
+        char string[4];
         if (isDecimalNegative(paramResult) || isHexadecimalNumber1024(paramResult))
         {
-            long lineAux = strtol(paramResult, NULL, 0);
-            sprintf (string, "%03lX", lineAux);
+            int lineAux = (int)strtol(paramResult, NULL, 0);
+            sprintf (string, "%03X", lineAux);
+
             switch (type) {
                 case JUMP:
                     addMemory(status, "0D", 0);
@@ -396,12 +378,12 @@ int checkInstructionParameter(char* param ,Status* status, int type )
         }
         else
         {
-            strcat(paramResult, ":");
-
             LabelNode* node = getLabelNode(paramResult, status->listLabels);
-            if (node == NULL)
-                return -1;
-            sprintf (string, "%03lX", node->label.lineNumber);
+            if (node == NULL){
+                status->error = INVALID_PARAMETER_INS_ERROR;
+                return;
+            }
+            sprintf (string, "%03X", node->label.lineNumber);
             if (node->label.left)
                 switch (type) {
                     case JUMP:
@@ -427,11 +409,8 @@ int checkInstructionParameter(char* param ,Status* status, int type )
                     break;
                 }
         }
-        for (int j = 0; j < 3; ++j)
-            status->memoryMap[(int)status->actualLine][(status->left ? 2 : 7) + j] = string[j];
+        addMemory(status, string, 2);
     }
     else
-        regfree(&regex);
-
-    return 0;
+        status->error = INVALID_PARAMETER_INS_ERROR;
 }

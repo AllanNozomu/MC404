@@ -42,7 +42,7 @@ void printLabels(LabelNode* now)
         printf("NULL\n");
         return;
     }
-    printf("%s %ld %s -> ", now->label.labelText, now->label.lineNumber, (now->label.left ? "Left" : "Rigth"));
+    printf("%s %d %s -> ", now->label.labelText, now->label.lineNumber, (now->label.left ? "Left" : "Rigth"));
     printLabels(now->next);
 }
 
@@ -93,6 +93,6 @@ void printSymbols(SymbolNode* now)
         printf("NULL\n");
         return;
     }
-    printf("%s %ld -> ", now->symbol.symbolText, now->symbol.value);
+    printf("%s %d -> ", now->symbol.symbolText, now->symbol.value);
     printSymbols(now->next);
 }

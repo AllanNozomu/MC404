@@ -34,7 +34,7 @@ void addMemory(Status* status, char* memory, int index)
     }
 }
 
-void printStatus(Status status)
+void printStatus(Status status, FILE* out)
 {
     // printf("STATUS----------------------\n");
     // printf("ActualLine: %ld  orientation: %s\n", status.actualLine, (status.left ? "Left" : "Right"));
@@ -48,22 +48,78 @@ void printStatus(Status status)
     {
         if (status.memoryMap[i][0] != ' ' || status.memoryMap[i][5] != ' ')
         {
-            printf("%03X ", i);
-            printf("%c%c %c%c%c %c%c %c%c%c\n",
-                status.memoryMap[i][0] == ' ' ? '0' : status.memoryMap[i][0],
-                status.memoryMap[i][1] == ' ' ? '0' : status.memoryMap[i][1],
-                status.memoryMap[i][2] == ' ' ? '0' : status.memoryMap[i][2],
-                status.memoryMap[i][3] == ' ' ? '0' : status.memoryMap[i][3],
-                status.memoryMap[i][4] == ' ' ? '0' : status.memoryMap[i][4],
-                status.memoryMap[i][5] == ' ' ? '0' : status.memoryMap[i][5],
-                status.memoryMap[i][6] == ' ' ? '0' : status.memoryMap[i][6],
-                status.memoryMap[i][7] == ' ' ? '0' : status.memoryMap[i][7],
-                status.memoryMap[i][8] == ' ' ? '0' : status.memoryMap[i][8],
-                status.memoryMap[i][9] == ' ' ? '0' : status.memoryMap[i][9]
-            );
+            if (out == NULL){
+                printf("%03X ", i);
+                printf("%c%c %c%c%c %c%c %c%c%c\n",
+                    status.memoryMap[i][0] == ' ' ? '0' : status.memoryMap[i][0],
+                    status.memoryMap[i][1] == ' ' ? '0' : status.memoryMap[i][1],
+                    status.memoryMap[i][2] == ' ' ? '0' : status.memoryMap[i][2],
+                    status.memoryMap[i][3] == ' ' ? '0' : status.memoryMap[i][3],
+                    status.memoryMap[i][4] == ' ' ? '0' : status.memoryMap[i][4],
+                    status.memoryMap[i][5] == ' ' ? '0' : status.memoryMap[i][5],
+                    status.memoryMap[i][6] == ' ' ? '0' : status.memoryMap[i][6],
+                    status.memoryMap[i][7] == ' ' ? '0' : status.memoryMap[i][7],
+                    status.memoryMap[i][8] == ' ' ? '0' : status.memoryMap[i][8],
+                    status.memoryMap[i][9] == ' ' ? '0' : status.memoryMap[i][9]
+                );
+            }
+            else
+            {
+                fprintf(out, "%03X ", i);
+                fprintf(out, "%c%c %c%c%c %c%c %c%c%c\n",
+                    status.memoryMap[i][0] == ' ' ? '0' : status.memoryMap[i][0],
+                    status.memoryMap[i][1] == ' ' ? '0' : status.memoryMap[i][1],
+                    status.memoryMap[i][2] == ' ' ? '0' : status.memoryMap[i][2],
+                    status.memoryMap[i][3] == ' ' ? '0' : status.memoryMap[i][3],
+                    status.memoryMap[i][4] == ' ' ? '0' : status.memoryMap[i][4],
+                    status.memoryMap[i][5] == ' ' ? '0' : status.memoryMap[i][5],
+                    status.memoryMap[i][6] == ' ' ? '0' : status.memoryMap[i][6],
+                    status.memoryMap[i][7] == ' ' ? '0' : status.memoryMap[i][7],
+                    status.memoryMap[i][8] == ' ' ? '0' : status.memoryMap[i][8],
+                    status.memoryMap[i][9] == ' ' ? '0' : status.memoryMap[i][9]
+                );
+            }
         }
     }
-    // printf("----------------------------\n");
+}
+
+void printError(Status status, int lineNumber,  FILE* out)
+{
+    char* errorMsg;
+    switch(status.error)
+    {
+        case TWO_LABEL_ERROR:
+            errorMsg = "Can't have two or more labels in a line.";
+        break;
+        case COMMAND_AND_DIR_ERROR:
+            errorMsg = "Can't have more than one instruction or directive in a line.";
+        break;
+        case DUPLICATE_LABEL_ERROR:
+            errorMsg = "This label has already been declared.";
+        break;
+        case INVALID_INSTRUCTION_ERROR:
+            errorMsg = "Expecting a valid label, instruction or directive";
+        break;
+        case INVALID_PARAMETER_DIR_ERROR:
+            errorMsg = "Invalid parameter passed to directive";
+        break;
+        case LABEL_AFTER_CMD_DIR_ERROR:
+            errorMsg = "Can't define a label after a instruction or directive";
+        break;
+        case INVALID_PARAMETER_INS_ERROR:
+            errorMsg = "Invalid parameter passed to instruction";
+        break;
+    }
+    if (out == NULL)
+    {
+        printf("ERROR on line %d\n",lineNumber);
+        printf("%s\n", errorMsg);
+    }
+    else
+    {
+        fprintf(out, "ERROR on line %d\n",lineNumber);
+        fprintf(out, "%s\n", errorMsg);
+    }
 }
 
 void freeStatus(Status status){

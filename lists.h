@@ -7,7 +7,7 @@
 typedef struct label
 {
     char labelText[65];
-    long lineNumber;
+    int lineNumber;
     int left;
 } Label;
 
@@ -22,7 +22,7 @@ typedef struct labelNode
 typedef struct symbol
 {
     char symbolText[65];
-    long value;
+    int value;
 } Symbol;
 
 typedef struct symbolNode
