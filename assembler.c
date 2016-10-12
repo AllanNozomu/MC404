@@ -19,8 +19,9 @@ int checkInstruction(char *instruction)
 
 int checkLine(char* line, Status* status)
 {
-    // printf("Line %s", line);
-    char *token = strtok(line, " \n");
+
+    char *token = strtok(line, " \n\t");
+    // printf("Line %s %s\n", line, token);
     status->label = status->cmdOrDir = status->error = 0;
     while (token != NULL)
     {
@@ -58,7 +59,7 @@ int checkLine(char* line, Status* status)
                     {
                         char* parameters[2];
                         for (int i = 0 ; i < d.numParameters; ++i){
-                            parameters[i] = strtok(NULL, " \n");
+                            parameters[i] = strtok(NULL, " \n\t");
                         }
                         d.function(status, parameters);
                     }
@@ -96,13 +97,13 @@ int checkLine(char* line, Status* status)
                 }
             break;
             case ERROR:
-                status->error = INVALID_INSTRUCTION_ERROR;
+                status->error = INVALID_COMMAND_ERROR;
             break;
         }
         if (status->error > 0)
             return -1;
 
-        token = strtok(NULL, " \n");
+        token = strtok(NULL, " \n\t");
     }
     return 1;
 }
@@ -110,7 +111,7 @@ int checkLine(char* line, Status* status)
 void orgDirective(Status* status, char* param[])
 {
     if (isHexadecimalNumber(param[0]) || isDecimal1024(param[0])){
-        status->actualLine = strtol(param[0], NULL, 0);
+        status->actualLine = (int)strtol(param[0], NULL, 0);
         status->left = 1;
         return;
     }
@@ -143,6 +144,8 @@ void setDirective(Status* status, char* param[])
 void alignDirective(Status* status, char* param[])
 {
     if (isDecimal1024(param[0])){
+        if (!status->left)
+            incStatus(status);
         int resto = status->actualLine % strtol(param[0], NULL, 0);
         status->actualLine = status->actualLine + resto;
         status->left = 1;
@@ -265,86 +268,99 @@ void checkCommand(char *command, Status* status)
 {
     if (!strcmp(command, "LDmq"))
         addMemory(status, "0A", 0);
+
     else if (!strcmp(command, "LSH"))
         addMemory(status, "14", 0);
+
     else if (!strcmp(command, "RSH"))
         addMemory(status, "15", 0);
 
-    char* param = strtok(NULL, " \n");
+    else
+    {
+        char* param = strtok(NULL, " \n\t");
 
-    if (!strcmp(command, "LD"))
-    {
-        addMemory(status, "01", 0);
-        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
-    }
-    else if (!strcmp(command, "LD-"))
-    {
-        addMemory(status, "02", 0);
-        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
-    }
-    else if (!strcmp(command, "LD|"))
-    {
-        addMemory(status, "03", 0);
-        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
-    }
-    else if (!strcmp(command, "LDmq_mx"))
-    {
-        addMemory(status, "09", 0);
-        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
-    }
-    else if (!strcmp(command, "ST"))
-    {
-        addMemory(status, "21", 0);
-        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
-    }
-
-
-    else if (!strcmp(command, "JMP"))
-        checkInstructionParameter(param, status, JUMP);
-    else if (!strcmp(command, "JUMP+"))
-        checkInstructionParameter(param, status, JUMP_PLUS);
+        if (!strcmp(command, "LD"))
+        {
+            addMemory(status, "01", 0);
+            checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+        }
+        else if (!strcmp(command, "LD-"))
+        {
+            addMemory(status, "02", 0);
+            checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+        }
+        else if (!strcmp(command, "LD|"))
+        {
+            addMemory(status, "03", 0);
+            checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+        }
+        else if (!strcmp(command, "LDmq_mx"))
+        {
+            addMemory(status, "09", 0);
+            checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+        }
+        else if (!strcmp(command, "ST"))
+        {
+            addMemory(status, "21", 0);
+            checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+        }
 
 
-    else if (!strcmp(command, "ADD"))
-    {
-        addMemory(status, "05", 0);
-        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
-    }
-    else if (!strcmp(command, "ADD|"))
-    {
-        addMemory(status, "07", 0);
-        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
-    }
-    else if (!strcmp(command, "SUB"))
-    {
-        addMemory(status, "06", 0);
-        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
-    }
-    else if (!strcmp(command, "SUB|"))
-    {
-        addMemory(status, "08", 0);
-        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
-    }
-    else if (!strcmp(command, "MUL"))
-    {
-        addMemory(status, "0B", 0);
-        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
-    }
-    else if (!strcmp(command, "DIV"))
-    {
-        addMemory(status, "0C", 0);
-        checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
-    }
+        else if (!strcmp(command, "JMP"))
+            checkInstructionParameter(param, status, JUMP);
+        else if (!strcmp(command, "JUMP+"))
+            checkInstructionParameter(param, status, JUMP_PLUS);
 
 
-    else if (!strcmp(command, "STaddr"))
-        checkInstructionParameter(param, status, STRADDR);
+        else if (!strcmp(command, "ADD"))
+        {
+            addMemory(status, "05", 0);
+            checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+        }
+        else if (!strcmp(command, "ADD|"))
+        {
+            addMemory(status, "07", 0);
+            checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+        }
+        else if (!strcmp(command, "SUB"))
+        {
+            addMemory(status, "06", 0);
+            checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+        }
+        else if (!strcmp(command, "SUB|"))
+        {
+            addMemory(status, "08", 0);
+            checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+        }
+        else if (!strcmp(command, "MUL"))
+        {
+            addMemory(status, "0B", 0);
+            checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+        }
+        else if (!strcmp(command, "DIV"))
+        {
+            addMemory(status, "0C", 0);
+            checkInstructionParameter(param, status, NORMAL_INSTRUCTION);
+        }
+
+
+        else if (!strcmp(command, "STaddr"))
+            checkInstructionParameter(param, status, STRADDR);
+
+        else
+            status->error = INVALID_INSTRUCTION_ERROR;
+    }
 }
 
 void checkInstructionParameter(char* param ,Status* status, int type )
 {
     if (status->firstTime)
         return;
+    if (param == NULL)
+    {
+        status->error = INVALID_PARAMETER_INS_ERROR;
+        return;
+    }
     regex_t regex;
 
     regcomp(&regex, "^\\\"[a-z_A-Z0-9]+\\\"$", REG_EXTENDED|REG_NOSUB);

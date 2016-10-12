@@ -98,7 +98,7 @@ void printError(Status status, int lineNumber,  FILE* out)
             errorMsg = "This label has already been declared.";
         break;
         case INVALID_INSTRUCTION_ERROR:
-            errorMsg = "Expecting a valid label, instruction or directive";
+            errorMsg = "Excepting a valid instruction.";
         break;
         case INVALID_PARAMETER_DIR_ERROR:
             errorMsg = "Invalid parameter passed to directive";
@@ -108,6 +108,12 @@ void printError(Status status, int lineNumber,  FILE* out)
         break;
         case INVALID_PARAMETER_INS_ERROR:
             errorMsg = "Invalid parameter passed to instruction";
+        break;
+        case INVALID_COMMAND_ERROR:
+            errorMsg = "Expecting a valid label, instruction or directive";
+        break;
+        case INVALID_DIRECTIVE_ERROR:
+            errorMsg = "Excepting a valid directive.";
         break;
     }
     if (out == NULL)

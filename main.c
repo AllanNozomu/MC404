@@ -52,13 +52,13 @@ int main(int argc, char *argv[])
         status.firstTime = 0;
         status.actualLine = 0;
         status.left = 1;
-        int lineNumber = 0;
+        lineNumber = 0;
         if (in != NULL)
         {
             fclose(in);
             in = fopen (argv[1], "r");
         }
-        // printStatus(status);
+        // printStatus(status, NULL);
         // printf("\n\nSEGUNDA LEITURA\n\n");
 
         while( fgets (line, LINE_SIZE, in) != NULL && success >= 0){

@@ -72,7 +72,7 @@ int isHexadecimalNumber1024(char* str)
     if (retorno)
     {
         long value = strtol(str, NULL, 0);
-        if (0 <= value && value < 1024)
+        if (0 <= value && value <= 1024)
             return 1;
     }
 
