@@ -115,10 +115,12 @@ int isComment(char* str)
     return retorno;
 }
 
-int isCommand(char* str)
+int isInstruction(char* str)
 {
     regex_t regex;
 
+    /*Apenas verifica se nao houve irregularidades que nao a caracterizem como
+    uma instrucao*/
     regcomp(&regex, "^[A-Z][a-zA-Z]+", REG_EXTENDED|REG_NOSUB);
     int retorno = !regexec(&regex, str, 0, NULL, 0);
     regfree(&regex);
@@ -130,6 +132,7 @@ int isDirective(char* str)
 {
     regex_t regex;
 
+    /*Verifica se comeca com '.'*/
     regcomp(&regex, "^\\.[a-z]+$", REG_EXTENDED|REG_NOSUB);
     int retorno = !regexec(&regex, str, 0, NULL, 0);
     regfree(&regex);

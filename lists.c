@@ -1,5 +1,7 @@
 #include "lists.h"
 
+/*LISTA SIMPLES DE LABELS-----------------------------------------------------*/
+
 LabelNode* createLabelNode(char* labelText, int lineNumber, int left)
 {
     LabelNode* node = malloc(sizeof(LabelNode));
@@ -47,7 +49,7 @@ void printLabels(LabelNode* now)
 }
 
 
-/*----------------------------------------------------------------------------*/
+/*LISTA SIMPLES DE SIMBOLOS---------------------------------------------------*/
 
 
 

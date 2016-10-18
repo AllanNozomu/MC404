@@ -7,15 +7,6 @@
 
 #define LINE_SIZE 256
 
-/*
-checkInstruction
-Checa a isntrucao lida e retorna o que ela representa (ou pode representar)
-char* instruction = instrucao a ser analisada, pode ser um label, uma diretica,
-                    um comando, um comentario ou simplesmente um lixo
-return int        = retorna um inteiro do typeInstruction referente ao tipo de
-                    instrucao passada como parametro
-*/
-
 int main(int argc, char *argv[])
 {
     FILE *in = NULL, *out = NULL;
@@ -31,23 +22,29 @@ int main(int argc, char *argv[])
             if(in == NULL)
             {
               printf("Error opening file");
-              return -1;
+              return 0;
             }
         break;
+        /*Mesmo nao sendo um caso valido, so para enfatizar*/
         default:
             printf("Expecting 1 or 2 parameteres. Exiting program...\n");
-            return -1;
+            return 0;
     }
 
+    /*Status do montador, inicializado*/
     Status status;
     initialize(&status);
     int success = 1;
     int lineNumber = 0;
+
+    /*Primeira leitura, ou seja, construir as listas de labels e simbolos e
+    ver possiveis discrepancias*/
     while( fgets (line, LINE_SIZE, in) != NULL && success >= 0){
         success = checkLine(line, &status);
         ++lineNumber;
     }
 
+    /*Passa para a segunda leitura se tudo ocorreu bem na primeira*/
     if (success > 0){
         status.firstTime = 0;
         status.actualLine = 0;
@@ -58,9 +55,9 @@ int main(int argc, char *argv[])
             fclose(in);
             in = fopen (argv[1], "r");
         }
-        // printStatus(status, NULL);
-        // printf("\n\nSEGUNDA LEITURA\n\n");
 
+        /*Segunda leitura, escrevendo agora no mapa de memoria mas ainda
+        verificando erro*/
         while( fgets (line, LINE_SIZE, in) != NULL && success >= 0){
             success = checkLine(line, &status);
             ++lineNumber;
@@ -72,6 +69,7 @@ int main(int argc, char *argv[])
     else
         printError(status, lineNumber, out);
 
+    /*Desalocar estruturas e fechar os arquivos*/
     freeStatus(status);
 
     if (in != NULL)

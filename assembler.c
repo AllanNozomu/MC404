@@ -1,6 +1,6 @@
 #include "assembler.h"
 
-int checkInstruction(char *instruction)
+int checkCommandType(char *instruction)
 {
     if (isComment(instruction))
         return COMMENT;
@@ -11,44 +11,42 @@ int checkInstruction(char *instruction)
     if (isLabel(instruction))
         return LABEL;
 
-    if (isCommand(instruction))
-        return COMMAND;
+    if (isInstruction(instruction))
+        return INSTRUCTION;
 
     return ERROR;
 }
 
 int checkLine(char* line, Status* status)
 {
-
     char *token = strtok(line, " \n\t");
-    // printf("Line %s %s\n", line, token);
+    /*Zera variaveis que verificam se ja houve labels, diretivas e instrucoes*/
     status->label = status->cmdOrDir = status->error = 0;
+    /*Vai pegando token a token separado pelos espacos e tratando-os*/
     while (token != NULL)
     {
-        switch (checkInstruction(token)){
+        switch (checkCommandType(token)){
             case COMMENT:
-                // printf("COMENTARIO %s\n", token);
                 do
+                    /*Acaba com a linha*/
                     token = strtok(NULL, "\n");
                 while (token != NULL);
                 break;
 
-            case COMMAND:
-                // printf("COMANDO %s\n", token);
+            case INSTRUCTION:
                 if (status->cmdOrDir)
-                    status->error = COMMAND_AND_DIR_ERROR;
+                    status->error = INSTRUCTION_AND_DIR_ERROR;
                 else
                 {
                     status->cmdOrDir = 1;
-                    checkCommand(token, status);
+                    checkInstruction(token, status);
                     incStatus(status);
                 }
                 break;
 
             case DIRECTIVE:
-                // printf("DIRETIVA %s\n", token);
                 if (status->cmdOrDir)
-                    status->error = COMMAND_AND_DIR_ERROR;
+                    status->error = INSTRUCTION_AND_DIR_ERROR;
                 else
                 {
                     status->cmdOrDir = 1;
@@ -57,6 +55,7 @@ int checkLine(char* line, Status* status)
                         status->error = INVALID_DIRECTIVE_ERROR;
                     else
                     {
+                        /*Le a quantidade de parametros necessarios*/
                         char* parameters[2];
                         for (int i = 0 ; i < d.numParameters; ++i){
                             parameters[i] = strtok(NULL, " \n\t");
@@ -67,7 +66,6 @@ int checkLine(char* line, Status* status)
                 break;
 
             case LABEL:
-                // printf("LABEL %s\n", token);
                 if (status->label)
                     status->error = TWO_LABEL_ERROR;
                 else if (status->cmdOrDir)
@@ -75,11 +73,16 @@ int checkLine(char* line, Status* status)
                 else
                 {
                     status->label = 1;
+                    /*Rotulos sao tratados somente na primeira leitura*/
                     if (!status->firstTime)
                         break;
                     char nameLabel[strlen(token)];
+
+                    /*Salva somente o corpo ignorando o ':'*/
                     strncpy(nameLabel, token, strlen(token)-1);
                     nameLabel[strlen(token)-1] = '\0';
+
+                    /*Verifica a existencia do rotulo e sua nova criacao*/
                     LabelNode* labelNode = getLabelNode(nameLabel, status->listLabels);
                     if (labelNode == NULL)
                     {
@@ -107,6 +110,8 @@ int checkLine(char* line, Status* status)
     }
     return 1;
 }
+
+/*Comando das diretivas*/
 
 void orgDirective(Status* status, char* param[])
 {
@@ -264,8 +269,11 @@ Directive checkDirective(char *command)
     return retorno;
 }
 
-void checkCommand(char *command, Status* status)
+/*Verifica a instrucao*/
+
+void checkInstruction(char *command, Status* status)
 {
+    /*Instrucoes basicas sem parametro*/
     if (!strcmp(command, "LDmq"))
         addMemory(status, "0A", 0);
 
@@ -275,6 +283,7 @@ void checkCommand(char *command, Status* status)
     else if (!strcmp(command, "RSH"))
         addMemory(status, "15", 0);
 
+    /*Instrucoes com parametros*/
     else
     {
         char* param = strtok(NULL, " \n\t");
@@ -352,8 +361,10 @@ void checkCommand(char *command, Status* status)
     }
 }
 
+/*Checa as instrucoes que contem parametro*/
 void checkInstructionParameter(char* param ,Status* status, int type )
 {
+    /*Instrucoes com parametros sao tratados somente na segunda leitura*/
     if (status->firstTime)
         return;
     if (param == NULL)
@@ -363,11 +374,13 @@ void checkInstructionParameter(char* param ,Status* status, int type )
     }
     regex_t regex;
 
+    /*Verifica o tipo de parametro, se esta entre aspas*/
     regcomp(&regex, "^\\\"[a-z_A-Z0-9]+\\\"$", REG_EXTENDED|REG_NOSUB);
     int retorno = !regexec(&regex, param, 0, NULL, 0);
     regfree(&regex);
     if (retorno)
     {
+        /*Pega somente o corpo que esta entre as aspas*/
         char paramResult[strlen(param) - 1];
         int i;
         for (i = 0; i < strlen(param) - 2; ++i)
@@ -375,6 +388,7 @@ void checkInstructionParameter(char* param ,Status* status, int type )
         paramResult[i] = '\0';
 
         char string[4];
+        /*Verifica se o parametro eh um numero*/
         if (isDecimalNegative(paramResult) || isHexadecimalNumber1024(paramResult))
         {
             int lineAux = (int)strtol(paramResult, NULL, 0);
@@ -392,6 +406,7 @@ void checkInstructionParameter(char* param ,Status* status, int type )
                 break;
             }
         }
+        /*Verifica se o parametro eh um rotulo ou um simbolo*/
         else
         {
             LabelNode* node = getLabelNode(paramResult, status->listLabels);
