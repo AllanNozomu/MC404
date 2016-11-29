@@ -8,38 +8,43 @@ void delay();
 void _start(void)
 {
   motor_cfg_t motor0;
-  motor0.id = 0;
   motor0.speed = 25;
+  motor0.id = 0;
 
   motor_cfg_t motor1;
   motor1.id = 0;
   motor1.speed = 25;
 
   unsigned int distances[16];
-  set_motors_speed(&motor0, &motor1);
+  // set_motors_speed(&motor0, &motor1);
 
   do
   {
-    distances[3] = read_sonar(3);
-    distances[4] = read_sonar(4);
-    delay();
-    if (distances[3] < 1000)
-    {
-      motor0.speed = 0;
-      motor1.speed = 25;
-      set_motors_speed(&motor0, &motor1);
-    }
-    else if (distances[4] < 1000)
-    {
-      motor0.speed = 25;
-      motor1.speed = 0;
-      set_motors_speed(&motor0, &motor1);
-    }
-    else{
-      motor0.speed = 25;
-      motor1.speed = 25;
-      set_motors_speed(&motor0, &motor1);
-    }
+      delay();
+      delay();
+      delay();
+      delay();
+      // set_motors_speed(&motor0, &motor1);
+    // distances[3] = read_sonar(3);
+    // distances[4] = read_sonar(4);
+    // delay();
+    // if (distances[3] < 1000)
+    // {
+    //   motor0.speed = 0;
+    //   motor1.speed = 25;
+    //   set_motors_speed(&motor0, &motor1);
+    // }
+    // else if (distances[4] < 1000)
+    // {
+    //   motor0.speed = 25;
+    //   motor1.speed = 0;
+    //   set_motors_speed(&motor0, &motor1);
+    // }
+    // else{
+    //   motor0.speed = 25;
+    //   motor1.speed = 25;
+    //   set_motors_speed(&motor0, &motor1);
+    // }
   } while (1);
 }
 

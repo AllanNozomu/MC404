@@ -1,5 +1,6 @@
 
     @ Global symbol
+    .global _start
     .global set_motor_speed
     .global set_motors_speed
     .global read_sonar
@@ -15,26 +16,30 @@ set_motor_speed:
 
         ldrb r1, [r0]           @ motor ID
         ldrb r2, [r0, #1]       @ motor speed
-        stmfd sp!, {r1, r2}     @ empilha os parametros na pilha
+        stmfd sp!, {r2}         @ empilha os parametros na pilha
+        stmfd sp!, {r1}
 
-        mov r7, #18             @ codigo set_motor_speed
+        mov r7, #18             @ syscall #18 set_motor_speed
         svc 0x0                 @ chama a syscall
+
+        add sp, sp, #8              @ desempilha os valores
 
         ldmfd sp!, {r7, pc}
 
 set_motors_speed:
         stmfd sp!, {r7, lr}
 
-        ldrb r1, [r0, #2]       @ motor2 ID
-        ldrb r2, [r0, #3]       @ motor2 speed
-        stmfd sp!, {r1, r2}     @ empilha os parametros do motor 1
+        @ldrb r1, [r0, #1]       @ motor0 speed
+        @ldrb r2, [r0, #3]       @ motor1 speed
+        @mov r1, #25
+        @mov r2, #25
+        @stmfd sp!, {r2}         @ empilha os parametros na pilha
+        @stmfd sp!, {r1}
 
-        ldrb r1, [r0]         @ motor1 ID
-        ldrb r2, [r0, #1]       @ motor1 speed
-        stmfd sp!, {r1, r2}     @ empilha os parametros do motor 2
-
-        mov r7, #19             @ codigo set_motors_speed
+        mov r7, #19             @ syscall #19 set_motors_speed
         svc 0x0                 @ chama a syscall
+
+        @add sp, sp, #8              @ desempilha os valores
 
         ldmfd sp!, {r7, pc}
 
@@ -42,7 +47,7 @@ read_sonar:
         stmfd sp!, {r7, lr}
 
         stmfd sp!, {r0}         @ empilha os parametros do id do sensor
-        mov r7, #16             @ codigo read_sonnar
+        mov r7, #16             @ syscall #16 read_sonnar
         svc 0x0                 @ chama a syscall
 
         ldmfd sp!, {r7, pc}
@@ -53,7 +58,7 @@ read_sonars:
         mov r3, r2              @ r3 sera o comeco do vetor
         mov r2, r1              @ r2 tera o fim
         mov r1, r0              @ r1 tera o comeco
-        mov r7, #16             @ codigo read_sonnar
+        mov r7, #16             @ syscall #16 read_sonnar
 
     loop_sonars:
         cmp r1, r2
@@ -74,24 +79,36 @@ read_sonars:
 
   register_proximity_callback:
           stmfd sp!, {r7, lr}
-          @mov r7, #125            @ Identifica a syscall 125 (read_sonar).
+
+          @mov r7, #17            @ syscall #18 register_proximity_callback
           @svc 0x0
+
           ldmfd sp!, {r7, pc}
 
   add_alarm:
           stmfd sp!, {r7, lr}
-          @mov r7, #125            @ Identifica a syscall 125 (read_sonar).
+
+          @mov r7, #22            @ syscall #18 add_alarm
           @svc 0x0
+
           ldmfd sp!, {r7, pc}
 
   get_time:
           stmfd sp!, {r7, lr}
-          @mov r7, #125            @ Identifica a syscall 125 (read_sonar).
-          @svc 0x0
+
+          mov r1, r0
+          mov r7, #20            @ syscall #18 get_time
+          svc 0x0
+          str r0, [r1]
+
           ldmfd sp!, {r7, pc}
 
   set_time:
           stmfd sp!, {r7, lr}
-          @mov r7, #125            @ Identifica a syscall 125 (read_sonar).
-          @svc 0x0
+
+          stmfd sp!, {r0}
+
+          mov r7, #21            @ syscall #18 set_time
+          svc 0x0
+
           ldmfd sp!, {r7, pc}
