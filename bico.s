@@ -14,13 +14,13 @@
 set_motor_speed:
         stmfd sp!, {r7, lr}
 
-        ldrb r1, [r0]           @ motor ID
-        ldrb r2, [r0, #1]       @ motor speed
-        stmfd sp!, {r2}         @ empilha os parametros na pilha
-        stmfd sp!, {r1}
+        ldrb r1, [r0]               @ motor ID
+        ldrb r2, [r0, #1]           @ motor speed
+        stmfd sp!, {r1-r2}          @ empilha os parametros na pilha
+        @stmfd sp!, {r1}
 
-        mov r7, #18             @ syscall #18 set_motor_speed
-        svc 0x0                 @ chama a syscall
+        mov r7, #18                 @ syscall #18 set_motor_speed
+        svc 0x0                     @ chama a syscall
 
         add sp, sp, #8              @ desempilha os valores
 
@@ -31,8 +31,8 @@ set_motors_speed:
 
         ldrb r2, [r0, #1]       @ motor0 speed
         ldrb r3, [r1, #1]       @ motor1 speed
-        stmfd sp!, {r3}         @ empilha os parametros na pilha
-        stmfd sp!, {r2}
+        stmfd sp!, {r2-r3}         @ empilha os parametros na pilha
+        @stmfd sp!, {r2}
 
         mov r7, #19             @ syscall #19 set_motors_speed
         svc 0x0                 @ chama a syscall

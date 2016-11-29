@@ -181,55 +181,84 @@ IRQ_HANDLER:
 @---------------------------------------------------------------------------
 
 READ_SONNAR:
-  b SYSCALL_HANDLER_END
+    b SYSCALL_HANDLER_END
 
 REGISTER_PROXIMITY_CALLBACK:
-  b SYSCALL_HANDLER_END
+    b SYSCALL_HANDLER_END
 
 SET_MOTOR_SPEED:
+    stmfd sp!, {r0-r3}
 
-  b SYSCALL_HANDLER_END
+    msr  CPSR_c, #0x1F                @ SYSTEM mode
+    ldr r0, [sp]                      @ Carrego o valor do id
+    ldr r1, [sp, #4]                  @ valor da velocidade do motor
+
+    ldr r3, =MOTOR_SPEED_MASK        @ mascara para pegar somente os 6 primeiros bits
+    and r1, r1, r3
+
+    ldr r2, =GPIO_BASE              @ obtendo o estado atual dos pinos definido em PSR
+    ldr r2, [r2, #GPIO_PSR]
+
+    ldr r3, =DR_MOTOR_SPEED_MASK    @ mascara para zerar os valores atuais em PSR
+
+    cmp r0, #1
+    beq MOTOR_1
+
+    bic r2, r2, r3, LSL #24
+    orr r2, r2, r1, LSL #26         @ seta a nova velocidade do motor1 em R2 (PSR)
+    mov r0, #1
+    bic r2, r2, r0, LSL #25        @ seta o pino do MOTOR0_WRITE para 0
+    b FIM_SET_MOTOR_SPEED
+
+  MOTOR_1:
+    bic r2, r2, r3, LSL #17
+    orr r2, r2, r1, LSL #19         @ seta a nova velocidade do motor0 em R2 (PSR)
+    mov r0, #1
+    bic r2, r2, r0, LSL #18         @ seta o pino do MOTOR0_WRITE para 0
+
+  FIM_SET_MOTOR_SPEED:
+    @ldr r2, =0Xfdf80000
+    ldr r1, =GPIO_BASE              @ atualiza o pino DR do GPIO
+    str r2, [r1, #GPIO_DR]          @ SET DEFINITIVO
+
+    msr  CPSR_c, #0x13       @ SUPERVISOR mode
+    ldmfd sp!, {r0-r3}
+
+    b SYSCALL_HANDLER_END
 
 SET_MOTOR_SPEEDS:
-  .set MOTOR_SPEED_MASK,    0x0000003F
-  .set DR_MOTOR_SPEED_MASK, 0X0003FFFF
-  stmfd sp!, {r0-r3}
+    stmfd sp!, {r0-r3}
 
-  msr  CPSR_c, #0x1F                @ SYSTEM mode
-  ldr r0, [sp]                      @ Carrego o valor da velocidade do motor0
-  ldr r1, [sp, #4]                  @ valor da velocidade do motor 1
+    msr  CPSR_c, #0x1F                @ SYSTEM mode
+    ldr r0, [sp]                      @ Carrego o valor da velocidade do motor0
+    ldr r1, [sp, #4]                  @ valor da velocidade do motor 1
 
-  ldr r3, =MOTOR_SPEED_MASK        @ mascara para pegar somente os 6 primeiros bits
-  and r0, r0, r3
-  and r1, r1, r3
+    ldr r3, =MOTOR_SPEED_MASK        @ mascara para pegar somente os 6 primeiros bits
+    and r0, r0, r3
+    and r1, r1, r3
 
-  ldr r2, =GPIO_BASE              @ obtendo o estado atual dos pinos definido em PSR
-  ldr r2, [r2, #GPIO_PSR]
+    ldr r2, =GPIO_BASE              @ obtendo o estado atual dos pinos definido em PSR
+    ldr r2, [r2, #GPIO_PSR]
 
-  ldr r3, =DR_MOTOR_SPEED_MASK    @ mascara para zerar os valores atuais em PSR
-  and r2, r2, r3
+    ldr r3, =DR_MOTOR_SPEED_MASK    @ mascara para zerar os valores atuais em PSR
+    bic r2, r2, r3, LSL #24
+    bic r2, r2, r3, LSL #17
 
-  orr r2, r2, r0, LSL #19         @ seta a nova velocidade do motor0 em R3 (PSR)
-  orr r2, r2, r1, LSL #26         @ seta a nova velocidade do motor1 em R3 (PSR)
+    orr r2, r2, r0, LSL #19         @ seta a nova velocidade do motor0 em R3 (PSR)
+    orr r2, r2, r1, LSL #26         @ seta a nova velocidade do motor1 em R3 (PSR)
 
-  mov r0, #1
-  bic r2, r2, r0, LSL #18         @ seta o pino do MOTOR0_WRITE para 0
-  bic r2, r2, r0, LSL #25         @ seta o pino do MOTOR1_WRITE para 0
+    mov r0, #1
+    bic r2, r2, r0, LSL #18         @ seta o pino do MOTOR0_WRITE para 0
+    bic r2, r2, r0, LSL #25         @ seta o pino do MOTOR1_WRITE para 0
 
-  @ldr r2, =0Xfdf80000
-  ldr r1, =GPIO_BASE              @ atualiza o pino DR do GPIO
-  str r2, [r1, #GPIO_DR]          @ SET DEFINITIVO
+    @ldr r2, =0Xfdf80000
+    ldr r1, =GPIO_BASE              @ atualiza o pino DR do GPIO
+    str r2, [r1, #GPIO_DR]          @ SET DEFINITIVO
 
-  @eor r2, r2, r0, LSL #18         @ seta o pino do MOTOR0_WRITE para 0
-  @eor r2, r2, r0, LSL #25         @ seta o pino do MOTOR1_WRITE para 0
+    msr  CPSR_c, #0x13       @ SUPERVISOR mode
+    ldmfd sp!, {r0-r3}
 
-  @ldr r1, =GPIO_BASE              @ atualiza o pino DR do GPIO
-  @str r2, [r1, #GPIO_DR]
-
-  msr  CPSR_c, #0x13       @ SUPERVISOR mode
-  ldmfd sp!, {r0-r3}
-
-  b SYSCALL_HANDLER_END
+    b SYSCALL_HANDLER_END
 
 GET_TIME:
   ldr r2, =SYSTEM_TIME
@@ -247,8 +276,10 @@ SET_ALARM:
 @ DATA E CONSTANTES
 @---------------------------------------------------------------------------
 
-.set MAX_ALARMS,        0x00000008
-.set MAX_CALLBACKS,     0x00000008
+.set MAX_ALARMS,            0x00000008
+.set MAX_CALLBACKS,         0x00000008
+.set MOTOR_SPEED_MASK,      0x0000003F
+.set DR_MOTOR_SPEED_MASK,   0X0000007F
 
 .set SUPERVISOR_SP,   0x77801850
 .set SYSTEM_USER_SP,  0x77801900
