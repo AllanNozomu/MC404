@@ -31,6 +31,15 @@ RESET_HANDLER:
     ldr r0, =interrupt_vector
     mcr p15, 0, r0, c12, c0, 0
 
+    msr  CPSR_c, #0x12       @ IRQ mode
+    ldr sp, =IRQ_SP
+
+    msr  CPSR_c, #0x1F       @ SYSTEM mode
+    ldr sp, =SYSTEM_USER_SP
+
+    msr  CPSR_c, #0x13       @ SUPERVISOR mode
+    ldr sp, =SUPERVISOR_SP
+
 @---------------------------------------------------------------------------
 @ CONFIGURACOES
 @---------------------------------------------------------------------------
@@ -42,7 +51,7 @@ GPT_CONFIG:
     .set GPT_SR,				      0x8
     .set GPT_OCR1,          	0x10
     .set GPT_IR,           		0xC
-    .set TIME_SZ,  			        0x000003E8
+    .set TIME_SZ,  			      8192
 
   	ldr r1, =GPT_BASE
 
@@ -121,7 +130,7 @@ SET_TZIC:
     msr  CPSR_c, #0x13       @ SUPERVISOR mode, IRQ/FIQ enabled
 
 @---------------------------------------------------------------------------
-
+msr  CPSR_c, #0x10           @ USER mode, IRQ/FIQ enabled
 ldr r0, =0x77802000
 mov pc, r0
 
@@ -132,7 +141,6 @@ mov pc, r0
 SYSCALL_HANDLER:
     stmfd sp!, {lr}
 
-    @msr  CPSR_c, #0x10       @ USER mode, IRQ/FIQ enabled
     cmp r7, #16
     beq READ_SONNAR
     cmp r7, #17
@@ -185,43 +193,41 @@ SET_MOTOR_SPEED:
 SET_MOTOR_SPEEDS:
   .set MOTOR_SPEED_MASK,    0x0000003F
   .set DR_MOTOR_SPEED_MASK, 0X0003FFFF
-  stmfd sp!, {r0-r11}
+  stmfd sp!, {r0-r3}
 
-  @msr  CPSR_c, #0x16       @ SYSTEM mode, IRQ/FIQ enabled
-  @ldr r0, [sp]                  @ Carrego o valor da velocidade do motor0
-  @ldr r1, [sp, #4]              @ valor da velocidade do motor 1
+  msr  CPSR_c, #0x1F                @ SYSTEM mode
+  ldr r0, [sp]                      @ Carrego o valor da velocidade do motor0
+  ldr r1, [sp, #4]                  @ valor da velocidade do motor 1
 
-  @ldr r3, =MOTOR_SPEED_MASK   @ mascara para pegar somente os 6 primeiros bits
-  @ldr r3, [r3]
-  @and r0, r0, r3
-  @and r1, r1, r3
+  ldr r3, =MOTOR_SPEED_MASK        @ mascara para pegar somente os 6 primeiros bits
+  and r0, r0, r3
+  and r1, r1, r3
 
-  @ldr r2, =GPIO_BASE           @ obtendo o estado atual dos pinos definido em PSR
-  @ldr r2, [r2, #GPIO_PSR]
+  ldr r2, =GPIO_BASE              @ obtendo o estado atual dos pinos definido em PSR
+  ldr r2, [r2, #GPIO_PSR]
 
-  @ldr r3, =DR_MOTOR_SPEED_MASK   @ mascara para zerar os valores atuais em PSR
-  @ldr r3, [r3]
-  @and r2, r2, r3
+  ldr r3, =DR_MOTOR_SPEED_MASK    @ mascara para zerar os valores atuais em PSR
+  and r2, r2, r3
 
-  @orr r2, r2, r0, LSL #19         @ seta a nova velocidade do motor0 em R3 (PSR)
-  @orr r2, r2, r1, LSL #26         @ seta a nova velocidade do motor1 em R3 (PSR)
+  orr r2, r2, r0, LSL #19         @ seta a nova velocidade do motor0 em R3 (PSR)
+  orr r2, r2, r1, LSL #26         @ seta a nova velocidade do motor1 em R3 (PSR)
 
-  @mov r0, #1
-  @orr r2, r2, r0, LSL #18         @ seta o pino do MOTOR0_WRITE para 1
-  @orr r2, r2, r0, LSL #25         @ seta o pino do MOTOR1_WRITE para 1
+  mov r0, #1
+  bic r2, r2, r0, LSL #18         @ seta o pino do MOTOR0_WRITE para 0
+  bic r2, r2, r0, LSL #25         @ seta o pino do MOTOR1_WRITE para 0
 
-  ldr r2, =0xFDF80000
+  @ldr r2, =0Xfdf80000
   ldr r1, =GPIO_BASE              @ atualiza o pino DR do GPIO
-  str r2, [r1, #GPIO_DR]
+  str r2, [r1, #GPIO_DR]          @ SET DEFINITIVO
 
-@  eor r2, r2, r0, LSL #18         @ seta o pino do MOTOR0_WRITE para 0
-@  eor r2, r2, r0, LSL #25         @ seta o pino do MOTOR1_WRITE para 0
+  @eor r2, r2, r0, LSL #18         @ seta o pino do MOTOR0_WRITE para 0
+  @eor r2, r2, r0, LSL #25         @ seta o pino do MOTOR1_WRITE para 0
 
-@  ldr r1, =GPIO_BASE              @ atualiza o pino DR do GPIO
-@  str r2, [r1, #GPIO_DR]
+  @ldr r1, =GPIO_BASE              @ atualiza o pino DR do GPIO
+  @str r2, [r1, #GPIO_DR]
 
-  ldmfd sp!, {r0-r11}
-  @msr  CPSR_c, #0x13       @ SUPERVISOR mode, IRQ/FIQ enabled
+  msr  CPSR_c, #0x13       @ SUPERVISOR mode
+  ldmfd sp!, {r0-r3}
 
   b SYSCALL_HANDLER_END
 
@@ -243,6 +249,10 @@ SET_ALARM:
 
 .set MAX_ALARMS,        0x00000008
 .set MAX_CALLBACKS,     0x00000008
+
+.set SUPERVISOR_SP,   0x77801850
+.set SYSTEM_USER_SP,  0x77801900
+.set IRQ_SP,          0x77801950
 
 .data
 SYSTEM_TIME:          .word 0
