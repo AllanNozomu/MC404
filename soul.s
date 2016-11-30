@@ -31,15 +31,6 @@ RESET_HANDLER:
     ldr r0, =interrupt_vector
     mcr p15, 0, r0, c12, c0, 0
 
-    msr  CPSR_c, #0x12       @ IRQ mode
-    ldr sp, =IRQ_SP
-
-    msr  CPSR_c, #0x1F       @ SYSTEM mode
-    ldr sp, =SYSTEM_USER_SP
-
-    msr  CPSR_c, #0x13       @ SUPERVISOR mode
-    ldr sp, =SUPERVISOR_SP
-
 @---------------------------------------------------------------------------
 @ CONFIGURACOES
 @---------------------------------------------------------------------------
@@ -51,7 +42,7 @@ GPT_CONFIG:
     .set GPT_SR,				      0x8
     .set GPT_OCR1,          	0x10
     .set GPT_IR,           		0xC
-    .set TIME_SZ,  			      8192
+    .set TIME_SZ,  			      107
 
   	ldr r1, =GPT_BASE
 
@@ -73,7 +64,7 @@ GPIO_CONFIG:
     .set GPIO_BASE,             0x53F84000
     .set GPIO_DR,               0x0
     .set GPIO_GDIR,          		0x4
-    .set GPIO_PSR,				      0x8
+    @.set GPIO_PSR,				      0x8
 
   	ldr r1, =GPIO_BASE
 
@@ -130,9 +121,21 @@ SET_TZIC:
     msr  CPSR_c, #0x13       @ SUPERVISOR mode, IRQ/FIQ enabled
 
 @---------------------------------------------------------------------------
-msr  CPSR_c, #0x10           @ USER mode, IRQ/FIQ enabled
-ldr r0, =0x77802000
-mov pc, r0
+@laco:
+    @b laco
+
+    msr  CPSR_c, #0x12       @ IRQ mode
+    ldr sp, =IRQ_SP
+
+    msr  CPSR_c, #0x1F       @ SYSTEM mode
+    ldr sp, =SYSTEM_USER_SP
+
+    msr  CPSR_c, #0x13       @ SUPERVISOR mode
+    ldr sp, =SUPERVISOR_SP
+
+    msr  CPSR_c, #0x10       @ USER mode, IRQ/FIQ enabled
+    ldr r0, =0x77802000
+    mov pc, r0
 
 @---------------------------------------------------------------------------
 @ HANDLERS
@@ -142,7 +145,7 @@ SYSCALL_HANDLER:
     stmfd sp!, {lr}
 
     cmp r7, #16
-    beq READ_SONNAR
+    beq READ_SONAR
     cmp r7, #17
     beq REGISTER_PROXIMITY_CALLBACK
     cmp r7, #18
@@ -163,16 +166,20 @@ SYSCALL_HANDLER:
 @---------------------------------------------------------------------------
 
 IRQ_HANDLER:
-	  ldr r1, = GPT_BASE
+    stmfd sp!, {r0-r1}
 
+	  ldr r1, =GPT_BASE
 	  mov r0, #1
 	  str r0, [r1, #GPT_SR]
 
 	@ Aumenta o tempo do sistema
-    ldr r2, =SYSTEM_TIME
-	  ldr r0, [r2]
-    add r0, r0, #1
-    str r0,[r2]
+    ldr r0, =SYSTEM_TIME
+	  ldr r1, [r0]
+    add r1, r1, #1
+    str r1,[r0]
+
+    ldmfd sp!, {r0-r1}
+
 	  sub lr, lr, #4
 	  movs pc, lr
 
@@ -180,24 +187,129 @@ IRQ_HANDLER:
 @ FUNCOES
 @---------------------------------------------------------------------------
 
-READ_SONNAR:
+READ_SONAR:
+    stmfd sp!, {r1-r3}
+
+    msr  CPSR_c, #0x1F                @ SYSTEM mode
+    ldr r0, [sp]                      @ Id sonar
+
+    @cmp r0, #15
+    @bls READ_SONAR_INI
+    @mov r0, #-1
+
+    @msr  CPSR_c, #0x13                @ SUPERVISOR mode
+    @ldmfd sp!, {r1-r3}
+
+    @b SYSCALL_HANDLER_END
+
+  READ_SONAR_INI:
+
+    mov r3, #0xF                      @ mascara para pegar somente os 4 bits do sonar
+    and r0, r0, r3
+
+    ldr r2, =GPIO_BASE                @ obtendo o estado atual dos pinos definido em PSR
+    ldr r2, [r2, #GPIO_DR]
+
+    bic r2, r2, r3, LSL #2            @ zera os sonars_mux usando a mascara
+
+    orr r2, r2, r0, LSL #2            @ seta o id do sonar em R2 (PSR)
+
+    ldr r3, =GPIO_BASE                @ atualiza o pino DR do GPIO
+
+    bic r2, r2, #0x2                  @ TRIGGER = 0
+    str r2, [r3, #GPIO_DR]            @ SET DEFINITIVO
+
+    mov r0, #4096
+  LOOP_TRIGGER_1:
+    sub r0, r0, #1
+    cmp r0, #0
+    bge LOOP_TRIGGER_1
+
+    orr r2, r2, #0x2                  @ TRIGGER = 1
+    str r2, [r3, #GPIO_DR]            @ SET DEFINITIVO
+
+    mov r0, #4096
+  LOOP_TRIGGER_2:
+    sub r0, r0, #1
+    cmp r0, #0
+    bge LOOP_TRIGGER_2
+
+    bic r2, r2, #0x2                  @ TRIGGER = 0
+    ldr r1, =GPIO_BASE                @ atualiza o pino DR do GPIO
+    str r2, [r1, #GPIO_DR]            @ SET DEFINITIVO
+
+  LOOP_FLAG:
+    ldr r2, =GPIO_BASE                @ obtendo o estado atual dos pinos definido em PSR
+    ldr r2, [r2, #GPIO_DR]
+
+    and r2, r2, #1
+    cmp r2, #1
+    beq FLAG_ONE
+
+    mov r0, #8192
+
+  FLAG_DELAY:
+    sub r0, r0, #1
+    cmp r0, #0
+    bgt FLAG_DELAY
+    b LOOP_FLAG
+
+  FLAG_ONE:
+
+    ldr r2, =GPIO_BASE                @ obtendo o estado atual dos pinos definido em PSR
+    ldr r2, [r2, #GPIO_DR]
+
+    ldr r3, =SONAR_DISTANCE_MASK      @ mascara para pegar somente os 4 bits do sonar
+    and r2, r2, r3, LSL #6
+
+    mov r2, r2, LSR #6
+    mov r0, r2
+
+    ldr r2, =DEBUGAR
+    str r0, [r2]
+
+    msr  CPSR_c, #0x13       @ SUPERVISOR mode
+    ldmfd sp!, {r1-r3}
+
     b SYSCALL_HANDLER_END
 
 REGISTER_PROXIMITY_CALLBACK:
     b SYSCALL_HANDLER_END
 
 SET_MOTOR_SPEED:
-    stmfd sp!, {r0-r3}
+    stmfd sp!, {r1-r3}
 
     msr  CPSR_c, #0x1F                @ SYSTEM mode
     ldr r0, [sp]                      @ Carrego o valor do id
     ldr r1, [sp, #4]                  @ valor da velocidade do motor
 
+    cmp r0, #1
+    bls SET_MOTOR_SPEED_VALID_ID      @ Verifica se o ID é 0 ou 1
+
+    mov r0, #-1
+    msr  CPSR_c, #0x13                @ SUPERVISOR mode
+    ldmfd sp!, {r1-r3}
+
+    b SYSCALL_HANDLER_END
+
+  SET_MOTOR_SPEED_VALID_ID:           @ Verifica se a velocidade é <= 0xF e >= 0
+
+    cmp r1, #0x3F
+    bls SET_MOTOR_SPEED_INI
+
+    mov r0, #-2
+    msr  CPSR_c, #0x13                @ SUPERVISOR mode
+    ldmfd sp!, {r1-r3}
+
+    b SYSCALL_HANDLER_END
+
+  SET_MOTOR_SPEED_INI:
+
     ldr r3, =MOTOR_SPEED_MASK        @ mascara para pegar somente os 6 primeiros bits
     and r1, r1, r3
 
     ldr r2, =GPIO_BASE              @ obtendo o estado atual dos pinos definido em PSR
-    ldr r2, [r2, #GPIO_PSR]
+    ldr r2, [r2, #GPIO_DR]
 
     ldr r3, =DR_MOTOR_SPEED_MASK    @ mascara para zerar os valores atuais em PSR
 
@@ -221,24 +333,47 @@ SET_MOTOR_SPEED:
     ldr r1, =GPIO_BASE              @ atualiza o pino DR do GPIO
     str r2, [r1, #GPIO_DR]          @ SET DEFINITIVO
 
-    msr  CPSR_c, #0x13       @ SUPERVISOR mode
-    ldmfd sp!, {r0-r3}
+    msr  CPSR_c, #0x13              @ SUPERVISOR mode
+    mov r0, #0                      @ Retorno correto da funcao
+    ldmfd sp!, {r1-r3}
 
     b SYSCALL_HANDLER_END
 
 SET_MOTOR_SPEEDS:
-    stmfd sp!, {r0-r3}
+    stmfd sp!, {r1-r3}
 
     msr  CPSR_c, #0x1F                @ SYSTEM mode
-    ldr r0, [sp]                      @ Carrego o valor da velocidade do motor0
+    ldr r0, [sp]                      @ Carrego o valor da velocidade do motor 0
     ldr r1, [sp, #4]                  @ valor da velocidade do motor 1
+
+    cmp r0, #0x3F                       @ Verifica a velocidade do motor 0
+    bls SET_MOTOR_SPEEDS_VALID_1
+
+    mov r0, #-1
+    msr  CPSR_c, #0x13                @ SUPERVISOR mode
+    ldmfd sp!, {r1-r3}
+
+    b SYSCALL_HANDLER_END
+
+  SET_MOTOR_SPEEDS_VALID_1:
+
+    cmp r1, #0x3F                       @ Verifica a velocidade do motor 1
+    bls SET_MOTOR_SPEEDS_VALID_2
+
+    mov r0, #-2
+    msr  CPSR_c, #0x13                @ SUPERVISOR mode
+    ldmfd sp!, {r1-r3}
+
+    b SYSCALL_HANDLER_END
+
+  SET_MOTOR_SPEEDS_VALID_2:
 
     ldr r3, =MOTOR_SPEED_MASK        @ mascara para pegar somente os 6 primeiros bits
     and r0, r0, r3
     and r1, r1, r3
 
     ldr r2, =GPIO_BASE              @ obtendo o estado atual dos pinos definido em PSR
-    ldr r2, [r2, #GPIO_PSR]
+    ldr r2, [r2, #GPIO_DR]
 
     ldr r3, =DR_MOTOR_SPEED_MASK    @ mascara para zerar os valores atuais em PSR
     bic r2, r2, r3, LSL #24
@@ -256,21 +391,33 @@ SET_MOTOR_SPEEDS:
     str r2, [r1, #GPIO_DR]          @ SET DEFINITIVO
 
     msr  CPSR_c, #0x13       @ SUPERVISOR mode
-    ldmfd sp!, {r0-r3}
+    mov r0, #0
+    ldmfd sp!, {r1-r3}
 
     b SYSCALL_HANDLER_END
 
 GET_TIME:
-  ldr r2, =SYSTEM_TIME
-  ldr r0, [r2]
-  b SYSCALL_HANDLER_END
+    ldr r0, =SYSTEM_TIME
+    ldr r0, [r0]
+
+    b SYSCALL_HANDLER_END
 
 SET_TIME:
-  b SYSCALL_HANDLER_END
+    stmfd sp!, {r0-r1}
+
+    msr  CPSR_c, #0x1F                @ SYSTEM mode
+    ldr r0, [sp]                      @ Carrego o valor do id
+
+    ldr r1, =SYSTEM_TIME
+    str r0, [r1]
+
+    msr  CPSR_c, #0x13                @ SUPERVISOR mode
+
+    ldmfd sp!, {r0-r1}
+    b SYSCALL_HANDLER_END
 
 SET_ALARM:
-  b SYSCALL_HANDLER_END
-
+    b SYSCALL_HANDLER_END
 
 @---------------------------------------------------------------------------
 @ DATA E CONSTANTES
@@ -278,12 +425,22 @@ SET_ALARM:
 
 .set MAX_ALARMS,            0x00000008
 .set MAX_CALLBACKS,         0x00000008
+
 .set MOTOR_SPEED_MASK,      0x0000003F
 .set DR_MOTOR_SPEED_MASK,   0X0000007F
+.set SONAR_MASK,            0x0000000F
+.set SONAR_DISTANCE_MASK,   0x00000FFF
+
+.set SYSTEM_TIME,           0x77801800
+.set TRIGGER_INIT,          0x77801804
+.set SONAR_COUNTER,         0x77801808
+.set DEBUGAR,         0x7780180C
 
 .set SUPERVISOR_SP,   0x77801850
 .set SYSTEM_USER_SP,  0x77801900
 .set IRQ_SP,          0x77801950
 
 .data
-SYSTEM_TIME:          .word 0
+@SYSTEM_TIME:
+@TRIGGER_INIT:
+@SONAR_COUNTER:

@@ -1,3 +1,4 @@
 *.x
 *.o
 disk.img
+*.asm

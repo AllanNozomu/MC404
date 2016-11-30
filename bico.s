@@ -32,7 +32,6 @@ set_motors_speed:
         ldrb r2, [r0, #1]       @ motor0 speed
         ldrb r3, [r1, #1]       @ motor1 speed
         stmfd sp!, {r2-r3}         @ empilha os parametros na pilha
-        @stmfd sp!, {r2}
 
         mov r7, #19             @ syscall #19 set_motors_speed
         svc 0x0                 @ chama a syscall
@@ -45,8 +44,11 @@ read_sonar:
         stmfd sp!, {r7, lr}
 
         stmfd sp!, {r0}         @ empilha os parametros do id do sensor
+        
         mov r7, #16             @ syscall #16 read_sonnar
         svc 0x0                 @ chama a syscall
+
+        add sp, sp, #4          @ desempilha os valores
 
         ldmfd sp!, {r7, pc}
 
@@ -86,7 +88,7 @@ read_sonars:
   add_alarm:
           stmfd sp!, {r7, lr}
 
-          @mov r7, #22            @ syscall #18 add_alarm
+          @mov r7, #22            @ syscall #19 add_alarm
           @svc 0x0
 
           ldmfd sp!, {r7, pc}
@@ -95,7 +97,7 @@ read_sonars:
           stmfd sp!, {r7, lr}
 
           mov r1, r0
-          mov r7, #20            @ syscall #18 get_time
+          mov r7, #20            @ syscall #20 get_time
           svc 0x0
           str r0, [r1]
 
@@ -106,7 +108,9 @@ read_sonars:
 
           stmfd sp!, {r0}
 
-          mov r7, #21            @ syscall #18 set_time
+          mov r7, #21            @ syscall #21 set_time
           svc 0x0
+
+          add sp, sp, #4         @ desempilha o parametro
 
           ldmfd sp!, {r7, pc}
