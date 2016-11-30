@@ -121,8 +121,6 @@ SET_TZIC:
     msr  CPSR_c, #0x13       @ SUPERVISOR mode, IRQ/FIQ enabled
 
 @---------------------------------------------------------------------------
-@laco:
-    @b laco
 
     msr  CPSR_c, #0x12       @ IRQ mode
     ldr sp, =IRQ_SP
@@ -193,14 +191,11 @@ READ_SONAR:
     msr  CPSR_c, #0x1F                @ SYSTEM mode
     ldr r0, [sp]                      @ Id sonar
 
-    @cmp r0, #15
-    @bls READ_SONAR_INI
-    @mov r0, #-1
+    cmp r0, #15
+    bls READ_SONAR_INI
+    mov r0, #-1
 
-    @msr  CPSR_c, #0x13                @ SUPERVISOR mode
-    @ldmfd sp!, {r1-r3}
-
-    @b SYSCALL_HANDLER_END
+    b READ_SONNAR_END
 
   READ_SONAR_INI:
 
@@ -268,13 +263,15 @@ READ_SONAR:
     ldr r2, =DEBUGAR
     str r0, [r2]
 
+  READ_SONNAR_END:
+
     msr  CPSR_c, #0x13       @ SUPERVISOR mode
     ldmfd sp!, {r1-r3}
 
     b SYSCALL_HANDLER_END
 
 REGISTER_PROXIMITY_CALLBACK:
-    b SYSCALL_HANDLER_END
+    b READ_SONAR
 
 SET_MOTOR_SPEED:
     stmfd sp!, {r1-r3}
@@ -287,10 +284,7 @@ SET_MOTOR_SPEED:
     bls SET_MOTOR_SPEED_VALID_ID      @ Verifica se o ID é 0 ou 1
 
     mov r0, #-1
-    msr  CPSR_c, #0x13                @ SUPERVISOR mode
-    ldmfd sp!, {r1-r3}
-
-    b SYSCALL_HANDLER_END
+    b SET_MOTOR_SPEED_END
 
   SET_MOTOR_SPEED_VALID_ID:           @ Verifica se a velocidade é <= 0xF e >= 0
 
@@ -298,10 +292,7 @@ SET_MOTOR_SPEED:
     bls SET_MOTOR_SPEED_INI
 
     mov r0, #-2
-    msr  CPSR_c, #0x13                @ SUPERVISOR mode
-    ldmfd sp!, {r1-r3}
-
-    b SYSCALL_HANDLER_END
+    b SET_MOTOR_SPEED_END
 
   SET_MOTOR_SPEED_INI:
 
@@ -320,7 +311,7 @@ SET_MOTOR_SPEED:
     orr r2, r2, r1, LSL #26         @ seta a nova velocidade do motor1 em R2 (PSR)
     mov r0, #1
     bic r2, r2, r0, LSL #25        @ seta o pino do MOTOR0_WRITE para 0
-    b FIM_SET_MOTOR_SPEED
+    b SET_MOTOR_SPEED_SET
 
   MOTOR_1:
     bic r2, r2, r3, LSL #17
@@ -328,13 +319,16 @@ SET_MOTOR_SPEED:
     mov r0, #1
     bic r2, r2, r0, LSL #18         @ seta o pino do MOTOR0_WRITE para 0
 
-  FIM_SET_MOTOR_SPEED:
+  SET_MOTOR_SPEED_SET:
     @ldr r2, =0Xfdf80000
     ldr r1, =GPIO_BASE              @ atualiza o pino DR do GPIO
     str r2, [r1, #GPIO_DR]          @ SET DEFINITIVO
 
-    msr  CPSR_c, #0x13              @ SUPERVISOR mode
     mov r0, #0                      @ Retorno correto da funcao
+
+  SET_MOTOR_SPEED_END:
+
+    msr  CPSR_c, #0x13              @ SUPERVISOR mode
     ldmfd sp!, {r1-r3}
 
     b SYSCALL_HANDLER_END
@@ -350,10 +344,7 @@ SET_MOTOR_SPEEDS:
     bls SET_MOTOR_SPEEDS_VALID_1
 
     mov r0, #-1
-    msr  CPSR_c, #0x13                @ SUPERVISOR mode
-    ldmfd sp!, {r1-r3}
-
-    b SYSCALL_HANDLER_END
+    b SET_MOTOR_SPEEDS_END
 
   SET_MOTOR_SPEEDS_VALID_1:
 
@@ -361,10 +352,7 @@ SET_MOTOR_SPEEDS:
     bls SET_MOTOR_SPEEDS_VALID_2
 
     mov r0, #-2
-    msr  CPSR_c, #0x13                @ SUPERVISOR mode
-    ldmfd sp!, {r1-r3}
-
-    b SYSCALL_HANDLER_END
+    b SET_MOTOR_SPEEDS_END
 
   SET_MOTOR_SPEEDS_VALID_2:
 
@@ -389,9 +377,11 @@ SET_MOTOR_SPEEDS:
     @ldr r2, =0Xfdf80000
     ldr r1, =GPIO_BASE              @ atualiza o pino DR do GPIO
     str r2, [r1, #GPIO_DR]          @ SET DEFINITIVO
+    mov r0, #0
+
+  SET_MOTOR_SPEEDS_END:
 
     msr  CPSR_c, #0x13       @ SUPERVISOR mode
-    mov r0, #0
     ldmfd sp!, {r1-r3}
 
     b SYSCALL_HANDLER_END
@@ -432,15 +422,11 @@ SET_ALARM:
 .set SONAR_DISTANCE_MASK,   0x00000FFF
 
 .set SYSTEM_TIME,           0x77801800
-.set TRIGGER_INIT,          0x77801804
-.set SONAR_COUNTER,         0x77801808
-.set DEBUGAR,         0x7780180C
+.set DEBUGAR,               0x7780180C
 
-.set SUPERVISOR_SP,   0x77801850
-.set SYSTEM_USER_SP,  0x77801900
-.set IRQ_SP,          0x77801950
+.set SUPERVISOR_SP,   0x77801940
+.set SYSTEM_USER_SP,  0x77801960
+.set IRQ_SP,          0x77801980
 
 .data
-@SYSTEM_TIME:
-@TRIGGER_INIT:
-@SONAR_COUNTER:
+SYSTEM_TIME:
