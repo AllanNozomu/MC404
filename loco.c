@@ -2,7 +2,7 @@
 
 /*segue-parede.c*/
 
-void faz_nada();
+void virar();
 
 void delay();
 
@@ -20,65 +20,74 @@ void _start(void)
   int j = 0;
   int d = 0;
 
-  add_alarm(&faz_nada, 1500);
-  add_alarm(&delay, 2000);
+  // add_alarm(&faz_nada, 1500);
+  // add_alarm(&delay, 2000);
+  //
+  // register_proximity_callback(1, 1000, &faz_nada);
 
-  register_proximity_callback(1, 1000, &faz_nada);
-  register_proximity_callback(2, 2000, &delay);
+  register_proximity_callback(3, 1000, &virar);
+  motor0.speed = 15;
+  motor1.speed = 15;
+  set_motors_speed(&motor0, &motor1);
 
   do
   {
-      d = read_sonar(3);
-      if (d > 1000){
-          motor0.speed = 63;
-          motor1.speed = 63;
-      } else {
-          motor0.speed = 0;
-          motor1.speed = 63;
-      }
-      set_motors_speed(&motor0, &motor1);
-
-
-      // while(i == j){
-      //   get_time(&i);
-      // }
-
-      // if (i  > 25){
-      //   motor0.speed = 31;
-      //   motor1.speed = 31;
-      // }
-      // else{
-      //   motor0.speed = 0;
-      //   motor1.speed = 31;
-      // }
-
-      // if (i > 50){
-      //   i = 0;
-      //   set_time(0);
-      // }
-      // if (i > 10)
-      //   i = 0;
-
-    // distances[3] = read_sonar(3);
-    // distances[4] = read_sonar(4);
-    // delay();
-    // if (distances[3] < 1000)
-    // {
-    //   motor0.speed = 0;
-    //   motor1.speed = 25;
-    //   set_motors_speed(&motor0, &motor1);
-    // }
-    // else if (distances[4] < 1000)
-    // {
-    //   motor0.speed = 25;
-    //   motor1.speed = 0;
-    //   set_motors_speed(&motor0, &motor1);
-    // }
-    // else{
-    //   motor0.speed = 25;
-    //   motor1.speed = 25;
-    //   set_motors_speed(&motor0, &motor1);
-    // }
+  //
+  //     // d = read_sonar(3);
+  //     // get_time(&i);
+  //     // if (i > 0){
+  //     //     motor0.speed = 63;
+  //     //     motor1.speed = 0;
+  //     // } else {
+  //     //     motor0.speed = 0;
+  //     //     motor1.speed = 0;
+  //     // }
+  //     // if (i > 1){
+  //     //   set_time(0);
+  //     // }
+  //
+  //     // delay();
+  //
+  //     // while(i == j){
+  //     //   get_time(&i);
+  //     // }
+  //
+  //     // if (i  > 25){
+  //     //   motor0.speed = 31;
+  //     //   motor1.speed = 31;
+  //     // }
+  //     // else{
+  //     //   motor0.speed = 0;
+  //     //   motor1.speed = 31;
+  //     // }
+  //
+  //     // if (i > 50){
+  //     //   i = 0;
+  //     //   set_time(0);
+  //     // }
+  //     // if (i > 10)
+  //     //   i = 0;
+  //
+  //   // distances[3] = read_sonar(3);
+  //   // distances[4] = read_sonar(4);
+  //   // delay();
+  //   // if (distances[3] < 1000)
+  //   // {
+  //   //   motor0.speed = 0;
+  //   //   motor1.speed = 25;
+  //   //   set_motors_speed(&motor0, &motor1);
+  //   // }
+  //   // else if (distances[4] < 1000)
+  //   // {
+  //   //   motor0.speed = 25;
+  //   //   motor1.speed = 0;
+  //   //   set_motors_speed(&motor0, &motor1);
+  //   // }
+  //   // else{
+  //   //   motor0.speed = 25;
+  //   //   motor1.speed = 25;
+  //   //   set_motors_speed(&motor0, &motor1);
+  //   // }
   } while (1);
 }
 
@@ -90,7 +99,15 @@ void delay()
   for(i = 0; i < 10000; i++ );
 }
 
-void faz_nada()
+void virar()
 {
-  return;
+  motor_cfg_t motor0;
+  motor0.id = 0;
+
+  motor_cfg_t motor1;
+  motor1.id = 1;
+
+  motor0.speed = 63;
+  motor1.speed = 0;
+  set_motors_speed(&motor0, &motor1);
 }

@@ -9,12 +9,12 @@ _start:
 
 interrupt_vector:
     b RESET_HANDLER
-.org 0x08
+  .org 0x08
     b SYSCALL_HANDLER
-.org 0x18
+  .org 0x18
     b IRQ_HANDLER
 
-.org 0x100
+  .org 0x100
 .text
 
 @---------------------------------------------------------------------------
@@ -50,7 +50,7 @@ GPT_CONFIG:
     .set GPT_SR,				      0x8
     .set GPT_OCR1,          	0x10
     .set GPT_IR,           		0xC
-    .set TIME_SZ,  			      107
+    .set TIME_SZ,  			      1
 
   	ldr r1, =GPT_BASE
 
@@ -165,26 +165,85 @@ SYSCALL_HANDLER:
     cmp r7, #22
     bleq SET_ALARM
 
+    cmp r7, #30
+    bne SYSCALL_HANDLER_END
+    mov pc, lr
+
   SYSCALL_HANDLER_END:
     ldmfd sp!, {lr}
+    msr  CPSR_c, #0x13            @ Gambs
     movs pc, lr
 
 @---------------------------------------------------------------------------
 
 IRQ_HANDLER:
-    stmfd sp!, {r0-r1}
+    stmfd sp!, {r0-r4, r7, lr}
 
+    mrs r0, SPSR
+    stmfd sp!, {r0}
+
+    msr CPSR_c, #0x13                @ SYSTEM mode
+
+    @ Configura para nao receber interrupcoes durante o processo
 	  ldr r1, =GPT_BASE
 	  mov r0, #1
 	  str r0, [r1, #GPT_SR]
 
-	@ Aumenta o tempo do sistema
+
+	  @ Aumenta o tempo do sistema
     ldr r0, =SYSTEM_TIME
 	  ldr r1, [r0]
     add r1, r1, #1
     str r1,[r0]
 
-    ldmfd sp!, {r0-r1}
+
+    @ Verificar callbacks
+
+    mov r4, #0                       @ indice das callbacks
+    msr CPSR_c, #0x10                  @ USER mode
+
+  LOOP_CALLBACKS_CHECK:
+    ldr r3, =CALLBACKS_QTY
+    ldr r3, [r3]
+    cmp r4, r3
+    bge END_CALLBACKS_CHECK
+
+    ldr r3, =CALLBACKS_VET
+
+    mov r1, #12
+    mul r2, r4, r1                  @ arruma o endereco do vetor de callbacks
+    add r4, r4, #1                  @ soma um no indice das callbacks
+
+    add r3, r2
+    ldr r1, [r3]                    @ Id do sonar da callback
+
+    stmfd sp!, {r1}                 @ empilha o id do sonar para ser chamada a
+    bl READ_SONAR                   @ funcao read_sonar
+    add sp, sp, #4                  @ desempilha
+
+    ldr r1, [r3, #4]                @ limiar de distancia do callbacks
+    cmp r0, r1                      @ compara a distancia com a limiar
+    bge LOOP_CALLBACKS_CHECK
+
+    ldr r2, [r3, #8]
+    @msr CPSR_c, #0x10               @ USER mode
+    blx r2
+
+    b LOOP_CALLBACKS_CHECK
+
+  END_CALLBACKS_CHECK:
+
+    @ Verificar alarms
+
+
+
+    mov r7, #30
+    svc 0x0
+
+    ldmfd sp!, {r0}
+    msr SPSR, r0
+
+    ldmfd sp!, {r0-r4, r7, lr}
 
 	  sub lr, lr, #4
 	  movs pc, lr
@@ -424,6 +483,14 @@ SET_MOTOR_SPEEDS:
     @ldr r2, =0Xfdf80000
     ldr r1, =GPIO_BASE              @ atualiza o pino DR do GPIO
     str r2, [r1, #GPIO_DR]          @ SET DEFINITIVO
+
+    mov r0, #1
+    eor r2, r2
+    orr r2, r2, r0, LSL #18         @ seta o pino do MOTOR0_WRITE para 1
+    orr r2, r2, r0, LSL #25         @ seta o pino do MOTOR1_WRITE para 1
+
+    str r2, [r1, #GPIO_DR]          @ SET DEFINITIVO
+
     mov r0, #0
 
   SET_MOTOR_SPEEDS_END:
@@ -529,9 +596,20 @@ SET_ALARM:
 
 .set ALARM_QTY,         0x778018A8
 
-.set SUPERVISOR_SP,   0x77801940
-.set SYSTEM_USER_SP,  0x77801960
-.set IRQ_SP,          0x77801980
+.set SUPERVISOR_SP,   0x77801E00
+.set SYSTEM_USER_SP,  0x77801F00
+.set IRQ_SP,          0x77802000
 
 .data
-SYSTEM_TIME:
+.org 0x0      @ 0x77801800
+
+.space 4      @ SYSTEM_TIME
+.space 96     @ CALLBACKS_VET   3*8*4
+.space 4      @ CALLBACKS_QTY
+.space 64     @ ALARM_VET       2*8*4
+.space 4      @ ALARM_QTY
+
+.org  0x500     @ 0x77801800 + 0x600 = 0x77801D00
+.space 0x100    @ D00 - E00
+.space 0x100    @ E00 - F00
+.space 0x100    @ F00 - 000
