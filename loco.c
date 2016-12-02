@@ -2,6 +2,8 @@
 
 /*segue-parede.c*/
 
+void faz_nada();
+
 void delay();
 
 /* main function */
@@ -17,6 +19,13 @@ void _start(void)
   int i = 0;
   int j = 0;
   int d = 0;
+
+  add_alarm(&faz_nada, 1500);
+  add_alarm(&delay, 2000);
+
+  register_proximity_callback(1, 1000, &faz_nada);
+  register_proximity_callback(2, 2000, &delay);
+
   do
   {
       d = read_sonar(3);
@@ -79,4 +88,9 @@ void delay()
   int i;
   /* Not the best way to delay */
   for(i = 0; i < 10000; i++ );
+}
+
+void faz_nada()
+{
+  return;
 }

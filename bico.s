@@ -44,7 +44,7 @@ read_sonar:
         stmfd sp!, {r7, lr}
 
         stmfd sp!, {r0}         @ empilha os parametros do id do sensor
-        
+
         mov r7, #16             @ syscall #16 read_sonnar
         svc 0x0                 @ chama a syscall
 
@@ -80,16 +80,22 @@ read_sonars:
   register_proximity_callback:
           stmfd sp!, {r7, lr}
 
-          @mov r7, #17            @ syscall #18 register_proximity_callback
-          @svc 0x0
+          stmfd sp!, {r0, r1, r2}         @ empilha, id sonar, distancia e ponteiro da funcao a ser chamada
+          mov r7, #17                     @ syscall #17 register_proximity_callback
+          svc 0x0
+          add sp, sp, #12                 @ desempilha os valores
 
           ldmfd sp!, {r7, pc}
 
   add_alarm:
           stmfd sp!, {r7, lr}
 
-          @mov r7, #22            @ syscall #19 add_alarm
-          @svc 0x0
+          stmfd sp!, {r0, r1}     @ ponteiro da funcao e o tempo do sistema
+
+          mov r7, #22             @ syscall #22 add_alarm
+          svc 0x0
+
+          add sp, sp, #8           @ desempilha os valores
 
           ldmfd sp!, {r7, pc}
 

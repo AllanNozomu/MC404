@@ -27,6 +27,14 @@ RESET_HANDLER:
     mov r0,#0
     str r0,[r2]
 
+    ldr r2, =CALLBACKS_QTY  @lembre-se de declarar esse contador em uma secao de dados!
+    mov r0,#0
+    str r0,[r2]
+
+    ldr r2, =ALARM_QTY  @lembre-se de declarar esse contador em uma secao de dados!
+    mov r0,#0
+    str r0,[r2]
+
     @Set interrupt table base address on coprocessor 15.
     ldr r0, =interrupt_vector
     mcr p15, 0, r0, c12, c0, 0
@@ -143,19 +151,19 @@ SYSCALL_HANDLER:
     stmfd sp!, {lr}
 
     cmp r7, #16
-    beq READ_SONAR
+    bleq READ_SONAR
     cmp r7, #17
-    beq REGISTER_PROXIMITY_CALLBACK
+    bleq REGISTER_PROXIMITY_CALLBACK
     cmp r7, #18
-    beq SET_MOTOR_SPEED
+    bleq SET_MOTOR_SPEED
     cmp r7, #19
-    beq SET_MOTOR_SPEEDS
+    bleq SET_MOTOR_SPEEDS
     cmp r7, #20
-    beq GET_TIME
+    bleq GET_TIME
     cmp r7, #21
-    beq SET_TIME
+    bleq SET_TIME
     cmp r7, #22
-    beq SET_ALARM
+    bleq SET_ALARM
 
   SYSCALL_HANDLER_END:
     ldmfd sp!, {lr}
@@ -186,7 +194,7 @@ IRQ_HANDLER:
 @---------------------------------------------------------------------------
 
 READ_SONAR:
-    stmfd sp!, {r1-r3}
+    stmfd sp!, {r1-r3, lr}
 
     msr  CPSR_c, #0x1F                @ SYSTEM mode
     ldr r0, [sp]                      @ Id sonar
@@ -260,21 +268,60 @@ READ_SONAR:
     mov r2, r2, LSR #6
     mov r0, r2
 
-    ldr r2, =DEBUGAR
-    str r0, [r2]
-
   READ_SONNAR_END:
 
     msr  CPSR_c, #0x13       @ SUPERVISOR mode
-    ldmfd sp!, {r1-r3}
+    ldmfd sp!, {r1-r3, pc}
 
-    b SYSCALL_HANDLER_END
+    @b SYSCALL_HANDLER_END
 
 REGISTER_PROXIMITY_CALLBACK:
-    b READ_SONAR
+    stmfd sp!, {r1-r4, lr}
+
+    msr  CPSR_c, #0x1F                @ SYSTEM mode
+
+    ldr r0, =CALLBACKS_QTY
+    ldr r0, [r0]
+
+    cmp r0, #8                        @ verificar numero de callbacks ativos
+    movhi r0, #-1
+    bhi REGISTER_PROXIMITY_CALLBACK_END
+
+    ldr r1, [sp]
+
+    cmp r1, #15                       @ verificar id sonar
+    movhi r1, #-2
+    bhi REGISTER_PROXIMITY_CALLBACK_END
+
+    mov r2, #12                       @ tamanho ocupado pelos tres parametros
+
+    mul r4, r0, r2                    @ tamanho total utilizado
+                                      @ pelo num de callbacks
+
+    ldr r3, =CALLBACKS_VET            @ salvar id no vetor de callbacks
+    str r1, [r3, r4]
+
+    add r4, r4, #4                    @ posicao do proximo parametro
+    ldr r1, [sp, #4]                  @ carregar limiar de distancia
+    str r1, [r3, r4]                  @ salvar limiar
+
+    add r4, r4, #4                    @ posicao do proximo parametro
+    ldr r1, [sp, #8]                  @ carregar posicao da funcao
+    str r1, [r3, r4]                  @ salvar posicao
+
+    ldr r1, =CALLBACKS_QTY            @ atualizar qtd de callbacks
+    ldr r0, [r1]
+    add r0, r0, #1
+    str r0, [r1]
+
+    mov r0, #0                        @ retorna 0
+
+  REGISTER_PROXIMITY_CALLBACK_END:
+    msr  CPSR_c, #0x13                @ SUPERVISOR mode
+    ldmfd sp!, {r1-r4, pc}
 
 SET_MOTOR_SPEED:
-    stmfd sp!, {r1-r3}
+    stmfd sp!, {r1-r3, lr}
 
     msr  CPSR_c, #0x1F                @ SYSTEM mode
     ldr r0, [sp]                      @ Carrego o valor do id
@@ -329,12 +376,12 @@ SET_MOTOR_SPEED:
   SET_MOTOR_SPEED_END:
 
     msr  CPSR_c, #0x13              @ SUPERVISOR mode
-    ldmfd sp!, {r1-r3}
+    ldmfd sp!, {r1-r3, pc}
 
-    b SYSCALL_HANDLER_END
+    @b SYSCALL_HANDLER_END
 
 SET_MOTOR_SPEEDS:
-    stmfd sp!, {r1-r3}
+    stmfd sp!, {r1-r3, lr}
 
     msr  CPSR_c, #0x1F                @ SYSTEM mode
     ldr r0, [sp]                      @ Carrego o valor da velocidade do motor 0
@@ -382,18 +429,23 @@ SET_MOTOR_SPEEDS:
   SET_MOTOR_SPEEDS_END:
 
     msr  CPSR_c, #0x13       @ SUPERVISOR mode
-    ldmfd sp!, {r1-r3}
+    ldmfd sp!, {r1-r3, pc}
 
-    b SYSCALL_HANDLER_END
+    @b SYSCALL_HANDLER_END
 
 GET_TIME:
+
+    stmfd sp!, {lr}
+
     ldr r0, =SYSTEM_TIME
     ldr r0, [r0]
 
-    b SYSCALL_HANDLER_END
+    ldmfd sp!, {pc}
+
+    @b SYSCALL_HANDLER_END
 
 SET_TIME:
-    stmfd sp!, {r0-r1}
+    stmfd sp!, {r0-r1, lr}
 
     msr  CPSR_c, #0x1F                @ SYSTEM mode
     ldr r0, [sp]                      @ Carrego o valor do id
@@ -403,11 +455,58 @@ SET_TIME:
 
     msr  CPSR_c, #0x13                @ SUPERVISOR mode
 
-    ldmfd sp!, {r0-r1}
-    b SYSCALL_HANDLER_END
+    ldmfd sp!, {r0-r1, pc}
+
+    @b SYSCALL_HANDLER_END
 
 SET_ALARM:
-    b SYSCALL_HANDLER_END
+
+    stmfd sp!, {r1-r4, lr}
+
+    msr  CPSR_c, #0x1F                @ SYSTEM mode
+
+    ldr r0, =ALARM_QTY
+    ldr r0, [r0]
+
+    cmp r0, #8                        @ verificar numero de callbacks ativos
+    movhi r0, #-1
+    bhi SET_ALARM_END
+
+    ldr r1, [sp, #4]
+
+    bl GET_TIME
+
+    cmp r0, r1
+    movgt r0, #-2
+    bgt SET_ALARM_END
+
+    mov r2, #8
+
+    ldr r0, =ALARM_QTY
+    ldr r0, [r0]                    @ tamanho ocupado pelos dois parametros
+
+    mul r4, r0, r2                    @ tamanho total utilizado
+                                      @ pelo num de alarms
+
+    ldr r1, [sp]                      @ carrega o end da funcao
+
+    ldr r3, =ALARM_VET                @ salva end no vetor de alarms
+    str r1, [r3, r4]
+
+    add r4, r4, #4                    @ posicao do proximo parametro
+    ldr r1, [sp, #4]                  @ carregar tempo do sistema
+    str r1, [r3, r4]                  @ salvar tempo
+
+    ldr r1, =ALARM_QTY                @ atualizar qtd de alarms
+    ldr r0, [r1]
+    add r0, r0, #1
+    str r0, [r1]
+
+    mov r0, #0                        @ retorna 0
+
+  SET_ALARM_END:
+    msr  CPSR_c, #0x13                @ SUPERVISOR mode
+    ldmfd sp!, {r1-r4, pc}
 
 @---------------------------------------------------------------------------
 @ DATA E CONSTANTES
@@ -417,12 +516,18 @@ SET_ALARM:
 .set MAX_CALLBACKS,         0x00000008
 
 .set MOTOR_SPEED_MASK,      0x0000003F
-.set DR_MOTOR_SPEED_MASK,   0X0000007F
+.set DR_MOTOR_SPEED_MASK,   0x0000007F
 .set SONAR_MASK,            0x0000000F
 .set SONAR_DISTANCE_MASK,   0x00000FFF
 
 .set SYSTEM_TIME,           0x77801800
-.set DEBUGAR,               0x7780180C
+.set CALLBACKS_VET,         0x77801804
+
+.set CALLBACKS_QTY,         0x77801864
+
+.set ALARM_VET,         0x77801868
+
+.set ALARM_QTY,         0x778018A8
 
 .set SUPERVISOR_SP,   0x77801940
 .set SYSTEM_USER_SP,  0x77801960
