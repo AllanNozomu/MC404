@@ -251,54 +251,54 @@ IRQ_HANDLER:
   END_CALLBACKS_CHECK:
 
   mov r4, #0
-  @LOOP_ALARMS_CHECK:
-  @  ldr r3, =ALARM_QTY
-  @  ldr r3, [r3]
-  @  cmp r4, r3
-  @  bge END_ALARMS_CHECK
-  @
-  @  ldr r3, =ALARM_VET
-  @
-  @  mov r1, #8
-  @  mul r2, r4, r1                  @ arruma o endereco do vetor de callbacks
-  @  add r4, r4, #1                  @ soma um no indice das callbacks
-  @
-  @  add r3, r3, r2
-  @  ldr r1, [r3, #4]                @ tempo
-  @
-  @  ldr r0, =SYSTEM_TIME
-  @  ldr r0, [r0]
-  @
-  @  cmp r0, r1                      @ compara o tempo dos alarmes
-  @  ble LOOP_ALARMS_CHECK
-  @
-  @  ldr r2, [r3]
-  @  stmfd sp!, {lr}
-  @  blx r2
-  @  ldmfd sp!, {lr}
-  @
-  @  mov r1, #8
-  @  ldr r0, =ALARM_QTY
-  @  ldr r5, [r0]
-  @  sub r5, r5, #1
-  @  str r5, [r0]
-  @  mul r2, r0, r1                  @ arruma o endereco do vetor de callbacks
-  @
-  @  ldr r1, =ALARM_VET
-  @  add r1, r1, r2
-  @
-  @  ldr r0, [r5]
-  @  str r0, [r3]
-  @  ldr r0, [r5, #4]
-  @  str r0, [r3, #4]
-  @
-  @  sub r4, r4, #1
-  @
-  @  @msr CPSR_c, #0x10               @ USER mode
-  @
-  @  b LOOP_ALARMS_CHECK
-  @
-  @END_ALARMS_CHECK:
+  LOOP_ALARMS_CHECK:
+    ldr r3, =ALARM_QTY
+    ldr r3, [r3]
+    cmp r4, r3
+    bge END_ALARMS_CHECK
+
+    ldr r3, =ALARM_VET
+
+    mov r1, #8
+    mul r2, r4, r1                  @ arruma o endereco do vetor de callbacks
+    add r4, r4, #1                  @ soma um no indice das callbacks
+
+    add r3, r3, r2
+    ldr r1, [r3, #4]                @ tempo
+
+    ldr r0, =SYSTEM_TIME
+    ldr r0, [r0]
+
+    cmp r0, r1                      @ compara o tempo dos alarmes
+    ble LOOP_ALARMS_CHECK
+
+    ldr r2, [r3]
+    stmfd sp!, {r3, lr}
+    blx r2
+    ldmfd sp!, {r3, lr}
+
+    mov r1, #8
+    ldr r0, =ALARM_QTY
+    ldr r5, [r0]
+    sub r5, r5, #1
+    str r5, [r0]
+    mul r2, r5, r1                  @ arruma o endereco do vetor de callbacks
+
+    ldr r1, =ALARM_VET
+    add r1, r1, r2
+
+    ldr r0, [r1]
+    str r0, [r3]
+    ldr r0, [r1, #4]
+    str r0, [r3, #4]
+
+    sub r4, r4, #1
+
+    @msr CPSR_c, #0x10               @ USER mode
+
+    b LOOP_ALARMS_CHECK
+
+  END_ALARMS_CHECK:
 
     @ Verificar alarms
 
@@ -320,12 +320,12 @@ IRQ_HANDLER:
 @---------------------------------------------------------------------------
 
 READ_SONAR:
-    stmfd sp!, {r1-r3, lr}
+    stmfd sp!, {r1-r4, lr}
 
     msr  CPSR_c, #0xDF                @ SYSTEM mode
-    ldr r0, [sp]                      @ Id sonar
+    ldr r4, [sp]                      @ Id sonar
 
-    cmp r0, #15
+    cmp r4, #15
     bls READ_SONAR_INI
     mov r0, #-1
 
@@ -334,33 +334,33 @@ READ_SONAR:
   READ_SONAR_INI:
 
     mov r3, #0xF                      @ mascara para pegar somente os 4 bits do sonar
-    and r0, r0, r3
+    and r4, r4, r3
 
     ldr r2, =GPIO_BASE                @ obtendo o estado atual dos pinos definido em PSR
     ldr r2, [r2, #GPIO_DR]
 
     bic r2, r2, r3, LSL #2            @ zera os sonars_mux usando a mascara
 
-    orr r2, r2, r0, LSL #2            @ seta o id do sonar em R2 (PSR)
+    orr r2, r2, r4, LSL #2            @ seta o id do sonar em R2 (PSR)
 
     ldr r3, =GPIO_BASE                @ atualiza o pino DR do GPIO
 
     bic r2, r2, #0x2                  @ TRIGGER = 0
     str r2, [r3, #GPIO_DR]            @ SET DEFINITIVO
 
-    mov r0, #4096
+    mov r4, #4096
   LOOP_TRIGGER_1:
-    sub r0, r0, #1
-    cmp r0, #0
+    sub r4, r4, #1
+    cmp r4, #0
     bge LOOP_TRIGGER_1
 
     orr r2, r2, #0x2                  @ TRIGGER = 1
     str r2, [r3, #GPIO_DR]            @ SET DEFINITIVO
 
-    mov r0, #4096
+    mov r4, #4096
   LOOP_TRIGGER_2:
-    sub r0, r0, #1
-    cmp r0, #0
+    sub r4, r4, #1
+    cmp r4, #0
     bge LOOP_TRIGGER_2
 
     bic r2, r2, #0x2                  @ TRIGGER = 0
@@ -375,11 +375,11 @@ READ_SONAR:
     cmp r2, #1
     beq FLAG_ONE
 
-    mov r0, #8192
+    mov r4, #8192
 
   FLAG_DELAY:
-    sub r0, r0, #1
-    cmp r0, #0
+    sub r4, r4, #1
+    cmp r4, #0
     bgt FLAG_DELAY
     b LOOP_FLAG
 
@@ -397,19 +397,19 @@ READ_SONAR:
   READ_SONNAR_END:
 
     msr  CPSR_c, #0xD3       @ SUPERVISOR mode
-    ldmfd sp!, {r1-r3, pc}
+    ldmfd sp!, {r1-r4, pc}
 
     @b SYSCALL_HANDLER_END
 
 REGISTER_PROXIMITY_CALLBACK:
-    stmfd sp!, {r1-r4, lr}
+    stmfd sp!, {r1-r5, lr}
 
     msr  CPSR_c, #0x1F                @ SYSTEM mode
 
-    ldr r0, =CALLBACKS_QTY
-    ldr r0, [r0]
+    ldr r5, =CALLBACKS_QTY
+    ldr r5, [r5]
 
-    cmp r0, #8                        @ verificar numero de callbacks ativos
+    cmp r5, #8                        @ verificar numero de callbacks ativos
     movhi r0, #-1
     bhi REGISTER_PROXIMITY_CALLBACK_END
 
@@ -421,7 +421,7 @@ REGISTER_PROXIMITY_CALLBACK:
 
     mov r2, #16                       @ tamanho ocupado pelos tres parametros
 
-    mul r4, r0, r2                    @ tamanho total utilizado
+    mul r4, r5, r2                    @ tamanho total utilizado
                                       @ pelo num de callbacks
 
     ldr r3, =CALLBACKS_VET            @ salvar id no vetor de callbacks
@@ -440,24 +440,24 @@ REGISTER_PROXIMITY_CALLBACK:
     str r1, [r3, r4]                  @ salvar posicao
 
     ldr r1, =CALLBACKS_QTY            @ atualizar qtd de callbacks
-    ldr r0, [r1]
-    add r0, r0, #1
-    str r0, [r1]
+    ldr r5, [r1]
+    add r5, r5, #1
+    str r5, [r1]
 
     mov r0, #0                        @ retorna 0
 
   REGISTER_PROXIMITY_CALLBACK_END:
     msr  CPSR_c, #0x13                @ SUPERVISOR mode
-    ldmfd sp!, {r1-r4, pc}
+    ldmfd sp!, {r1-r5, pc}
 
 SET_MOTOR_SPEED:
-    stmfd sp!, {r1-r3, lr}
+    stmfd sp!, {r1-r4, lr}
 
     msr  CPSR_c, #0x1F                @ SYSTEM mode
-    ldr r0, [sp]                      @ Carrego o valor do id
+    ldr r4, [sp]                      @ Carrego o valor do id
     ldr r1, [sp, #4]                  @ valor da velocidade do motor
 
-    cmp r0, #1
+    cmp r4, #1
     bls SET_MOTOR_SPEED_VALID_ID      @ Verifica se o ID é 0 ou 1
 
     mov r0, #-1
@@ -481,20 +481,20 @@ SET_MOTOR_SPEED:
 
     ldr r3, =DR_MOTOR_SPEED_MASK    @ mascara para zerar os valores atuais em PSR
 
-    cmp r0, #1
+    cmp r4, #1
     beq MOTOR_1
 
-    bic r2, r2, r3, LSL #24
+    bic r2, r2, r3, LSL #25
     orr r2, r2, r1, LSL #26         @ seta a nova velocidade do motor1 em R2 (PSR)
-    mov r0, #1
-    bic r2, r2, r0, LSL #25        @ seta o pino do MOTOR0_WRITE para 0
+    mov r4, #1
+    bic r2, r2, r4, LSL #25        @ seta o pino do MOTOR0_WRITE para 0
     b SET_MOTOR_SPEED_SET
 
   MOTOR_1:
-    bic r2, r2, r3, LSL #17
+    bic r2, r2, r3, LSL #18
     orr r2, r2, r1, LSL #19         @ seta a nova velocidade do motor0 em R2 (PSR)
-    mov r0, #1
-    bic r2, r2, r0, LSL #18         @ seta o pino do MOTOR0_WRITE para 0
+    mov r4, #1
+    bic r2, r2, r4, LSL #18         @ seta o pino do MOTOR0_WRITE para 0
 
   SET_MOTOR_SPEED_SET:
     @ldr r2, =0Xfdf80000
@@ -506,18 +506,19 @@ SET_MOTOR_SPEED:
   SET_MOTOR_SPEED_END:
 
     msr  CPSR_c, #0x13              @ SUPERVISOR mode
-    ldmfd sp!, {r1-r3, pc}
+    ldmfd sp!, {r1-r4, pc}
 
     @b SYSCALL_HANDLER_END
 
 SET_MOTOR_SPEEDS:
-    stmfd sp!, {r1-r3, lr}
+    stmfd sp!, {r1-r4, lr}
 
     msr  CPSR_c, #0x1F                @ SYSTEM mode
-    ldr r0, [sp]                      @ Carrego o valor da velocidade do motor 0
+    ldr r4, [sp]                      @ Carrego o valor da velocidade do motor 0
     ldr r1, [sp, #4]                  @ valor da velocidade do motor 1
+    msr  CPSR_c, #0x13       @ SUPERVISOR mode
 
-    cmp r0, #0x3F                       @ Verifica a velocidade do motor 0
+    cmp r4, #0x3F                       @ Verifica a velocidade do motor 0
     bls SET_MOTOR_SPEEDS_VALID_1
 
     mov r0, #-1
@@ -534,40 +535,38 @@ SET_MOTOR_SPEEDS:
   SET_MOTOR_SPEEDS_VALID_2:
 
     ldr r3, =MOTOR_SPEED_MASK        @ mascara para pegar somente os 6 primeiros bits
-    and r0, r0, r3
+    and r4, r4, r3
     and r1, r1, r3
 
     ldr r2, =GPIO_BASE              @ obtendo o estado atual dos pinos definido em PSR
     ldr r2, [r2, #GPIO_DR]
 
     ldr r3, =DR_MOTOR_SPEED_MASK    @ mascara para zerar os valores atuais em PSR
-    bic r2, r2, r3, LSL #24
-    bic r2, r2, r3, LSL #17
+    bic r2, r2, r3, LSL #18
+    bic r2, r2, r3, LSL #25
 
-    orr r2, r2, r0, LSL #19         @ seta a nova velocidade do motor0 em R3 (PSR)
+    orr r2, r2, r4, LSL #19         @ seta a nova velocidade do motor0 em R3 (PSR)
     orr r2, r2, r1, LSL #26         @ seta a nova velocidade do motor1 em R3 (PSR)
 
-    mov r0, #1
-    bic r2, r2, r0, LSL #18         @ seta o pino do MOTOR0_WRITE para 0
-    bic r2, r2, r0, LSL #25         @ seta o pino do MOTOR1_WRITE para 0
+    mov r4, #1
+    bic r2, r2, r4, LSL #18         @ seta o pino do MOTOR0_WRITE para 0
+    bic r2, r2, r4, LSL #25         @ seta o pino do MOTOR1_WRITE para 0
 
     @ldr r2, =0Xfdf80000
     ldr r1, =GPIO_BASE              @ atualiza o pino DR do GPIO
     str r2, [r1, #GPIO_DR]          @ SET DEFINITIVO
 
-    mov r0, #1
-    eor r2, r2
-    orr r2, r2, r0, LSL #18         @ seta o pino do MOTOR0_WRITE para 1
-    orr r2, r2, r0, LSL #25         @ seta o pino do MOTOR1_WRITE para 1
-
-    str r2, [r1, #GPIO_DR]          @ SET DEFINITIVO
+    @mov r4, #1
+    @orr r2, r2, r4, LSL #18         @ seta o pino do MOTOR0_WRITE para 1
+    @orr r2, r2, r4, LSL #25         @ seta o pino do MOTOR1_WRITE para 1
+    @
+    @str r2, [r1, #GPIO_DR]          @ SET DEFINITIVO
 
     mov r0, #0
 
   SET_MOTOR_SPEEDS_END:
 
-    msr  CPSR_c, #0x13       @ SUPERVISOR mode
-    ldmfd sp!, {r1-r3, pc}
+    ldmfd sp!, {r1-r4, pc}
 
     @b SYSCALL_HANDLER_END
 
@@ -599,14 +598,14 @@ SET_TIME:
 
 SET_ALARM:
 
-    stmfd sp!, {r1-r4, lr}
+    stmfd sp!, {r1-r5, lr}
 
     msr  CPSR_c, #0x1F                @ SYSTEM mode
 
-    ldr r0, =ALARM_QTY
-    ldr r0, [r0]
+    ldr r5, =ALARM_QTY
+    ldr r5, [r5]
 
-    cmp r0, #8                        @ verificar numero de callbacks ativos
+    cmp r5, #8                        @ verificar numero de callbacks ativos
     movhi r0, #-1
     bhi SET_ALARM_END
 
@@ -614,16 +613,16 @@ SET_ALARM:
 
     bl GET_TIME
 
-    cmp r0, r1
+    cmp r5, r1
     movgt r0, #-2
     bgt SET_ALARM_END
 
     mov r2, #8
 
-    ldr r0, =ALARM_QTY
-    ldr r0, [r0]                    @ tamanho ocupado pelos dois parametros
+    ldr r5, =ALARM_QTY
+    ldr r5, [r5]                    @ tamanho ocupado pelos dois parametros
 
-    mul r4, r0, r2                    @ tamanho total utilizado
+    mul r4, r5, r2                    @ tamanho total utilizado
                                       @ pelo num de alarms
 
     ldr r1, [sp]                      @ carrega o end da funcao
@@ -636,15 +635,15 @@ SET_ALARM:
     str r1, [r3, r4]                  @ salvar tempo
 
     ldr r1, =ALARM_QTY                @ atualizar qtd de alarms
-    ldr r0, [r1]
-    add r0, r0, #1
-    str r0, [r1]
+    ldr r5, [r1]
+    add r5, r5, #1
+    str r5, [r1]
 
     mov r0, #0                        @ retorna 0
 
   SET_ALARM_END:
     msr  CPSR_c, #0x13                @ SUPERVISOR mode
-    ldmfd sp!, {r1-r4, pc}
+    ldmfd sp!, {r1-r5, pc}
 
 @---------------------------------------------------------------------------
 @ DATA E CONSTANTES

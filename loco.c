@@ -4,9 +4,9 @@
 
 // void virarEsq();
 void virar();
-void frente();
+// void frente();
 void delay();
-void parar();
+// void parar();
 
 int flag = 0;
 int esquerda = 0;
@@ -25,14 +25,24 @@ void _start(void)
   motor0.speed = 31;
   motor1.speed = 31;
   set_motors_speed(&motor0, &motor1);
-  delay();
-
-  // register_proximity_callback(1, 1000, &faz_nada);
-  register_proximity_callback(3, 1000, &parar);
-  // register_proximity_callback(4, 1200, &virar);
+  // add_alarm(&frente, 1000);
+  // add_alarm(&frente, 500);
+  // add_alarm(&frente, 250);
+  // add_alarm(&parar, 500);
+  // // add_alarm(&parar, 1000);
+  // add_alarm(&virar, 750);
+  // delay();
+  //
+  // // register_proximity_callback(1, 1000, &faz_nada);
+  register_proximity_callback(3, 1000, &virar);
+  register_proximity_callback(4, 1200, &virar);
   // // register_proximity_callback(5, 2100, &virarDir);
   do
   {
+    // motor0.speed = 31;
+    // motor1.speed = 31;
+    // set_motors_speed(&motor0, &motor1);
+    // delay();
     // int d3 = read_sonar(3);
     // int d4 = read_sonar(4);
     //
@@ -129,7 +139,7 @@ void delay()
   /* Not the best way to delay */
   for(i = 0; i < 10000; i++ );
 }
-//
+// //
 // void frente()
 // {
 //   motor_cfg_t motor0;
@@ -140,6 +150,32 @@ void delay()
 //
 //   motor0.speed = 15;
 //   motor1.speed = 15;
+//   set_motors_speed(&motor0, &motor1);
+// }
+//
+// void virar()
+// {
+//   motor_cfg_t motor0;
+//   motor0.id = 0;
+//
+//   motor_cfg_t motor1;
+//   motor1.id = 1;
+//
+//   motor0.speed = 0;
+//   motor1.speed = 15;
+//   set_motors_speed(&motor0, &motor1);
+// }
+//
+// void parar()
+// {
+//   motor_cfg_t motor0;
+//   motor0.id = 0;
+//
+//   motor_cfg_t motor1;
+//   motor1.id = 1;
+//
+//   motor0.speed = 0;
+//   motor1.speed = 0;
 //   set_motors_speed(&motor0, &motor1);
 // }
 
@@ -157,40 +193,53 @@ void delay()
 //   set_motors_speed(&motor0, &motor1);
 // }
 
-// void virar()
-// {
-//   motor_cfg_t motor0;
-//   motor0.id = 0;
-//
-//   motor_cfg_t motor1;
-//   motor1.id = 1;
-//
-//   int d3 = read_sonar(3);
-//   int d4 = read_sonar(4);
-//   delay();
-//   if (d3 < 1200 || d4 < 1200){
-//     if (d3 < d4)
-//     {
-//       motor0.speed = 0;
-//       motor1.speed = 15;
-//     }
-//     else
-//     {
-//       motor0.speed = 15;
-//       motor1.speed = 0;
-//     }
-//   }
-//   set_motors_speed(&motor0, &motor1);
-// }
-
-void parar() {
+void virar()
+{
   motor_cfg_t motor0;
   motor0.id = 0;
 
   motor_cfg_t motor1;
   motor1.id = 1;
 
-  motor0.speed = 0;
-  motor1.speed = 0;
+  int d3 = read_sonar(3);
+  int d4 = read_sonar(4);
+
+  while (d3 < 1200 || d4 < 1200)
+  {
+    if (!esquerda)
+    {
+      esquerda = d3 - d4;
+      if (esquerda == 0)
+        esquerda = 1;
+    }
+
+    if (esquerda > 0) {
+      motor0.speed = 15;
+      motor1.speed = 0;
+    } else {
+      motor0.speed = 0;
+      motor1.speed = 15;
+    }
+    set_motors_speed(&motor0, &motor1);
+    d3 = read_sonar(3);
+    d4 = read_sonar(4);
+    delay();
+  }
+  motor0.speed = 31;
+  motor1.speed = 31;
+  esquerda = 0;
+
   set_motors_speed(&motor0, &motor1);
 }
+//
+// void parar() {
+//   motor_cfg_t motor0;
+//   motor0.id = 0;
+//
+//   motor_cfg_t motor1;
+//   motor1.id = 1;
+//
+//   motor0.speed = 0;
+//   motor1.speed = 0;
+//   set_motors_speed(&motor0, &motor1);
+// }
