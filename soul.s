@@ -50,7 +50,7 @@ GPT_CONFIG:
     .set GPT_SR,				      0x8
     .set GPT_OCR1,          	0x10
     .set GPT_IR,           		0xC
-    .set TIME_SZ,  			      1
+    .set TIME_SZ,  			      512
 
   	ldr r1, =GPT_BASE
 
@@ -148,7 +148,9 @@ SET_TZIC:
 @---------------------------------------------------------------------------
 
 SYSCALL_HANDLER:
-    stmfd sp!, {lr}
+    stmfd sp!, {r1, lr}
+    mrs r1, SPSR
+    stmfd sp!, {r1}
 
     cmp r7, #16
     bleq READ_SONAR
@@ -167,28 +169,31 @@ SYSCALL_HANDLER:
 
     cmp r7, #30
     bne SYSCALL_HANDLER_END
+    add sp, sp, #4
+    ldmfd sp!, {r1, lr}
     mov pc, lr
 
   SYSCALL_HANDLER_END:
-    ldmfd sp!, {lr}
-    msr  CPSR_c, #0x13            @ Gambs
+    ldmfd sp!, {r1}
+    msr SPSR, r1
+    ldmfd sp!, {r1, lr}
+    @msr  CPSR_c, #0x13            @ Gambs
     movs pc, lr
 
 @---------------------------------------------------------------------------
 
 IRQ_HANDLER:
-    stmfd sp!, {r0-r4, r7, lr}
+    stmfd sp!, {r0-r7, lr}
 
-    mrs r0, SPSR
-    stmfd sp!, {r0}
+    mrs r0, SPSR                     @ SUPOSTAMENTE SALVA MODE DESCONHECIDO
+    stmfd sp!, {r0}                  @ EMPILHA MODE DESCONHECIDO
 
-    msr CPSR_c, #0x13                @ SYSTEM mode
+    msr CPSR_c, #0xD2                  @ IRQ mode
 
     @ Configura para nao receber interrupcoes durante o processo
-	  ldr r1, =GPT_BASE
-	  mov r0, #1
-	  str r0, [r1, #GPT_SR]
-
+    ldr r1, =GPT_BASE
+    mov r0, #1
+    str r0, [r1, #GPT_SR]
 
 	  @ Aumenta o tempo do sistema
     ldr r0, =SYSTEM_TIME
@@ -196,11 +201,11 @@ IRQ_HANDLER:
     add r1, r1, #1
     str r1,[r0]
 
-
     @ Verificar callbacks
 
-    mov r4, #0                       @ indice das callbacks
-    msr CPSR_c, #0x10                  @ USER mode
+    mov r4, #0                        @ indice das callbacks
+    msr CPSR_c, #0xD0                   @ USER mode
+
 
   LOOP_CALLBACKS_CHECK:
     ldr r3, =CALLBACKS_QTY
@@ -210,40 +215,102 @@ IRQ_HANDLER:
 
     ldr r3, =CALLBACKS_VET
 
-    mov r1, #12
+    mov r1, #16
     mul r2, r4, r1                  @ arruma o endereco do vetor de callbacks
     add r4, r4, #1                  @ soma um no indice das callbacks
 
-    add r3, r2
+    add r3, r3, r2
     ldr r1, [r3]                    @ Id do sonar da callback
 
     stmfd sp!, {r1}                 @ empilha o id do sonar para ser chamada a
-    bl READ_SONAR                   @ funcao read_sonar
+    mov r7, #16
+    svc 0x0                         @ funcao read_sonar
     add sp, sp, #4                  @ desempilha
 
     ldr r1, [r3, #4]                @ limiar de distancia do callbacks
     cmp r0, r1                      @ compara a distancia com a limiar
     bge LOOP_CALLBACKS_CHECK
+    ldr r5, [r3, #12]
+    cmp r5, #1
+    beq LOOP_CALLBACKS_CHECK
 
     ldr r2, [r3, #8]
+    mov r5, #1
+    str r5, [r3, #12]
+
     @msr CPSR_c, #0x10               @ USER mode
+    stmfd sp!, {r3, lr}
     blx r2
+    ldmfd sp!, {r3, lr}
+
+    mov r5, #0
+    str r5, [r3, #12]
 
     b LOOP_CALLBACKS_CHECK
 
   END_CALLBACKS_CHECK:
 
+  mov r4, #0
+  @LOOP_ALARMS_CHECK:
+  @  ldr r3, =ALARM_QTY
+  @  ldr r3, [r3]
+  @  cmp r4, r3
+  @  bge END_ALARMS_CHECK
+  @
+  @  ldr r3, =ALARM_VET
+  @
+  @  mov r1, #8
+  @  mul r2, r4, r1                  @ arruma o endereco do vetor de callbacks
+  @  add r4, r4, #1                  @ soma um no indice das callbacks
+  @
+  @  add r3, r3, r2
+  @  ldr r1, [r3, #4]                @ tempo
+  @
+  @  ldr r0, =SYSTEM_TIME
+  @  ldr r0, [r0]
+  @
+  @  cmp r0, r1                      @ compara o tempo dos alarmes
+  @  ble LOOP_ALARMS_CHECK
+  @
+  @  ldr r2, [r3]
+  @  stmfd sp!, {lr}
+  @  blx r2
+  @  ldmfd sp!, {lr}
+  @
+  @  mov r1, #8
+  @  ldr r0, =ALARM_QTY
+  @  ldr r5, [r0]
+  @  sub r5, r5, #1
+  @  str r5, [r0]
+  @  mul r2, r0, r1                  @ arruma o endereco do vetor de callbacks
+  @
+  @  ldr r1, =ALARM_VET
+  @  add r1, r1, r2
+  @
+  @  ldr r0, [r5]
+  @  str r0, [r3]
+  @  ldr r0, [r5, #4]
+  @  str r0, [r3, #4]
+  @
+  @  sub r4, r4, #1
+  @
+  @  @msr CPSR_c, #0x10               @ USER mode
+  @
+  @  b LOOP_ALARMS_CHECK
+  @
+  @END_ALARMS_CHECK:
+
     @ Verificar alarms
-
-
 
     mov r7, #30
     svc 0x0
 
+    msr CPSR_c, #0xD2                  @ IRQ mode
+
     ldmfd sp!, {r0}
     msr SPSR, r0
 
-    ldmfd sp!, {r0-r4, r7, lr}
+    ldmfd sp!, {r0-r7, lr}
 
 	  sub lr, lr, #4
 	  movs pc, lr
@@ -255,7 +322,7 @@ IRQ_HANDLER:
 READ_SONAR:
     stmfd sp!, {r1-r3, lr}
 
-    msr  CPSR_c, #0x1F                @ SYSTEM mode
+    msr  CPSR_c, #0xDF                @ SYSTEM mode
     ldr r0, [sp]                      @ Id sonar
 
     cmp r0, #15
@@ -329,7 +396,7 @@ READ_SONAR:
 
   READ_SONNAR_END:
 
-    msr  CPSR_c, #0x13       @ SUPERVISOR mode
+    msr  CPSR_c, #0xD3       @ SUPERVISOR mode
     ldmfd sp!, {r1-r3, pc}
 
     @b SYSCALL_HANDLER_END
@@ -352,7 +419,7 @@ REGISTER_PROXIMITY_CALLBACK:
     movhi r1, #-2
     bhi REGISTER_PROXIMITY_CALLBACK_END
 
-    mov r2, #12                       @ tamanho ocupado pelos tres parametros
+    mov r2, #16                       @ tamanho ocupado pelos tres parametros
 
     mul r4, r0, r2                    @ tamanho total utilizado
                                       @ pelo num de callbacks
@@ -366,6 +433,10 @@ REGISTER_PROXIMITY_CALLBACK:
 
     add r4, r4, #4                    @ posicao do proximo parametro
     ldr r1, [sp, #8]                  @ carregar posicao da funcao
+    str r1, [r3, r4]                  @ salvar posicao
+
+    add r4, r4, #4                    @ posicao do proximo parametro
+    mov r1, #0                        @ nao esta executando
     str r1, [r3, r4]                  @ salvar posicao
 
     ldr r1, =CALLBACKS_QTY            @ atualizar qtd de callbacks
@@ -590,21 +661,21 @@ SET_ALARM:
 .set SYSTEM_TIME,           0x77801800
 .set CALLBACKS_VET,         0x77801804
 
-.set CALLBACKS_QTY,         0x77801864
+.set CALLBACKS_QTY,         0x77801884
 
-.set ALARM_VET,         0x77801868
+.set ALARM_VET,             0x77801888
 
-.set ALARM_QTY,         0x778018A8
+.set ALARM_QTY,             0x778018C8
 
-.set SUPERVISOR_SP,   0x77801E00
-.set SYSTEM_USER_SP,  0x77801F00
-.set IRQ_SP,          0x77802000
+.set SUPERVISOR_SP,         0x77801E00
+.set SYSTEM_USER_SP,        0x77801F00
+.set IRQ_SP,                0x77802000
 
 .data
 .org 0x0      @ 0x77801800
 
 .space 4      @ SYSTEM_TIME
-.space 96     @ CALLBACKS_VET   3*8*4
+.space 128    @ CALLBACKS_VET   4*8*4
 .space 4      @ CALLBACKS_QTY
 .space 64     @ ALARM_VET       2*8*4
 .space 4      @ ALARM_QTY
