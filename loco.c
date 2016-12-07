@@ -4,9 +4,11 @@
 
 // void virarEsq();
 void virar();
+void virarEsq();
+void virarDir();
 void frente();
 void delay();
-// void parar();
+void parar();
 
 int flag = 0;
 int esquerda = 0;
@@ -33,11 +35,25 @@ void _start(void)
   // delay();
   //
   // // register_proximity_callback(1, 1000, &faz_nada);
-  // register_proximity_callback(3, 1200, &virar);
+  register_proximity_callback(3, 1200, &virarDir);
+  register_proximity_callback(3, 1200, &virarDir);
+  register_proximity_callback(3, 1200, &virarDir);
+  register_proximity_callback(3, 1200, &virarDir);
+  register_proximity_callback(3, 1200, &virarDir);
+  register_proximity_callback(3, 1200, &virarDir);
+  register_proximity_callback(3, 1200, &virarDir);
+  register_proximity_callback(3, 1200, &virarDir);
+  register_proximity_callback(3, 1200, &virarDir);
+  // register_proximity_callback(4, 1200, &virarEsq);
   // register_proximity_callback(4, 1200, &virar);
   // // register_proximity_callback(5, 2100, &virarDir);
   do
   {
+
+    frente();
+    delay();
+    // parar();
+    // delay();
     // motor0.speed = 31;
     // motor1.speed = 31;
     // set_motors_speed(&motor0, &motor1);
@@ -151,10 +167,10 @@ void frente()
   motor1.speed = 63;
   set_motors_speed(&motor0, &motor1);
 
-  int time1;
-  get_time(&time1);
-  tempo += 200;
-  add_alarm(&virar, time1 + tempo);
+  // int time1;
+  // get_time(&time1);
+  // tempo += 200;
+  // add_alarm(&virar, time1 + tempo);
 }
 
 void virar()
@@ -169,37 +185,51 @@ void virar()
   motor1.speed = 15;
   set_motors_speed(&motor0, &motor1);
 
-  int time2;
-  get_time(&time2);
-  add_alarm(&frente, time2 + 360);
+  // int time2;
+  // get_time(&time2);
+  // add_alarm(&frente, time2 + 360);
 }
 //
-// void parar()
-// {
-//   motor_cfg_t motor0;
-//   motor0.id = 0;
-//
-//   motor_cfg_t motor1;
-//   motor1.id = 1;
-//
-//   motor0.speed = 0;
-//   motor1.speed = 0;
-//   set_motors_speed(&motor0, &motor1);
-// }
+void parar()
+{
+  motor_cfg_t motor0;
+  motor0.id = 0;
 
-// void virarEsq()
-// {
-//   motor_cfg_t motor0;
-//   motor0.id = 0;
-//
-//   motor_cfg_t motor1;
-//   motor1.id = 1;
-//
-//   motor0.speed = 15;
-//   motor1.speed = 0;
-//
-//   set_motors_speed(&motor0, &motor1);
-// }
+  motor_cfg_t motor1;
+  motor1.id = 1;
+
+  motor0.speed = 0;
+  motor1.speed = 0;
+  set_motors_speed(&motor0, &motor1);
+}
+
+void virarEsq()
+{
+  motor_cfg_t motor0;
+  motor0.id = 0;
+
+  motor_cfg_t motor1;
+  motor1.id = 1;
+
+  motor0.speed = 15;
+  motor1.speed = 0;
+
+  set_motors_speed(&motor0, &motor1);
+}
+
+void virarDir()
+{
+  motor_cfg_t motor0;
+  motor0.id = 0;
+
+  motor_cfg_t motor1;
+  motor1.id = 1;
+
+  motor0.speed = 0;
+  motor1.speed = 15;
+
+  set_motors_speed(&motor0, &motor1);
+}
 //
 // void virar()
 // {
