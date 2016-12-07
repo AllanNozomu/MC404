@@ -148,7 +148,8 @@ SET_TZIC:
 @---------------------------------------------------------------------------
 
 SYSCALL_HANDLER:
-    stmfd sp!, {r1, lr}
+    stmfd sp!, {lr}
+
     mrs r1, SPSR
     stmfd sp!, {r1}
 
@@ -170,13 +171,14 @@ SYSCALL_HANDLER:
     cmp r7, #30
     bne SYSCALL_HANDLER_END
     add sp, sp, #4
-    ldmfd sp!, {r1, lr}
+    ldmfd sp!, {lr}
     mov pc, lr
 
   SYSCALL_HANDLER_END:
     ldmfd sp!, {r1}
     msr SPSR, r1
-    ldmfd sp!, {r1, lr}
+
+    ldmfd sp!, {lr}
     @msr  CPSR_c, #0x13            @ Gambs
     movs pc, lr
 
@@ -222,10 +224,12 @@ IRQ_HANDLER:
     add r3, r3, r2
     ldr r1, [r3]                    @ Id do sonar da callback
 
+    stmfd sp!, {r2-r3}              @ empilha o id do sonar para ser chamada a
     stmfd sp!, {r1}                 @ empilha o id do sonar para ser chamada a
     mov r7, #16
     svc 0x0                         @ funcao read_sonar
     add sp, sp, #4                  @ desempilha
+    ldmfd sp!, {r2-r3}              @ empilha o id do sonar para ser chamada a
 
     ldr r1, [r3, #4]                @ limiar de distancia do callbacks
     cmp r0, r1                      @ compara a distancia com a limiar
@@ -320,7 +324,7 @@ IRQ_HANDLER:
 @---------------------------------------------------------------------------
 
 READ_SONAR:
-    stmfd sp!, {r1-r4, lr}
+    stmfd sp!, {r4, lr}
 
     msr  CPSR_c, #0xDF                @ SYSTEM mode
     ldr r4, [sp]                      @ Id sonar
@@ -397,12 +401,12 @@ READ_SONAR:
   READ_SONNAR_END:
 
     msr  CPSR_c, #0xD3       @ SUPERVISOR mode
-    ldmfd sp!, {r1-r4, pc}
+    ldmfd sp!, {r4, pc}
 
     @b SYSCALL_HANDLER_END
 
 REGISTER_PROXIMITY_CALLBACK:
-    stmfd sp!, {r1-r5, lr}
+    stmfd sp!, {r4-r5, lr}
 
     msr  CPSR_c, #0x1F                @ SYSTEM mode
 
@@ -448,10 +452,10 @@ REGISTER_PROXIMITY_CALLBACK:
 
   REGISTER_PROXIMITY_CALLBACK_END:
     msr  CPSR_c, #0x13                @ SUPERVISOR mode
-    ldmfd sp!, {r1-r5, pc}
+    ldmfd sp!, {r4-r5, pc}
 
 SET_MOTOR_SPEED:
-    stmfd sp!, {r1-r4, lr}
+    stmfd sp!, {r4, lr}
 
     msr  CPSR_c, #0x1F                @ SYSTEM mode
     ldr r4, [sp]                      @ Carrego o valor do id
@@ -506,12 +510,12 @@ SET_MOTOR_SPEED:
   SET_MOTOR_SPEED_END:
 
     msr  CPSR_c, #0x13              @ SUPERVISOR mode
-    ldmfd sp!, {r1-r4, pc}
+    ldmfd sp!, {r4, pc}
 
     @b SYSCALL_HANDLER_END
 
 SET_MOTOR_SPEEDS:
-    stmfd sp!, {r1-r4, lr}
+    stmfd sp!, {r4, lr}
 
     msr  CPSR_c, #0x1F                @ SYSTEM mode
     ldr r4, [sp]                      @ Carrego o valor da velocidade do motor 0
@@ -566,7 +570,7 @@ SET_MOTOR_SPEEDS:
 
   SET_MOTOR_SPEEDS_END:
 
-    ldmfd sp!, {r1-r4, pc}
+    ldmfd sp!, {r4, pc}
 
     @b SYSCALL_HANDLER_END
 
@@ -582,7 +586,7 @@ GET_TIME:
     @b SYSCALL_HANDLER_END
 
 SET_TIME:
-    stmfd sp!, {r0-r1, lr}
+    stmfd sp!, {lr}
 
     msr  CPSR_c, #0x1F                @ SYSTEM mode
     ldr r0, [sp]                      @ Carrego o valor do id
@@ -592,13 +596,13 @@ SET_TIME:
 
     msr  CPSR_c, #0x13                @ SUPERVISOR mode
 
-    ldmfd sp!, {r0-r1, pc}
+    ldmfd sp!, {pc}
 
     @b SYSCALL_HANDLER_END
 
 SET_ALARM:
 
-    stmfd sp!, {r1-r5, lr}
+    stmfd sp!, {r4-r5, lr}
 
     msr  CPSR_c, #0x1F                @ SYSTEM mode
 
@@ -643,7 +647,7 @@ SET_ALARM:
 
   SET_ALARM_END:
     msr  CPSR_c, #0x13                @ SUPERVISOR mode
-    ldmfd sp!, {r1-r5, pc}
+    ldmfd sp!, {r4-r5, pc}
 
 @---------------------------------------------------------------------------
 @ DATA E CONSTANTES

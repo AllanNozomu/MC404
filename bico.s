@@ -103,8 +103,12 @@ read_sonars:
           stmfd sp!, {r7, lr}
 
           mov r1, r0
+          stmfd sp!, {r1}
+
           mov r7, #20            @ syscall #20 get_time
           svc 0x0
+
+          ldmfd sp!, {r1}
           str r0, [r1]
 
           ldmfd sp!, {r7, pc}
