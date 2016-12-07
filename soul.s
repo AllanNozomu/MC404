@@ -276,10 +276,7 @@ IRQ_HANDLER:
     cmp r0, r1                      @ compara o tempo dos alarmes
     ble LOOP_ALARMS_CHECK
 
-    ldr r2, [r3]
-    stmfd sp!, {r3, lr}
-    blx r2
-    ldmfd sp!, {r3, lr}
+    mov r6, r3                      @ salva o endereco do ponteiro da funcao
 
     mov r1, #8
     ldr r0, =ALARM_QTY
@@ -295,8 +292,29 @@ IRQ_HANDLER:
     str r0, [r3]
     ldr r0, [r1, #4]
     str r0, [r3, #4]
-
     sub r4, r4, #1
+
+    ldr r2, [r6]
+    stmfd sp!, {r6, lr}
+    blx r2
+    ldmfd sp!, {r6, lr}
+
+    @mov r1, #8
+    @ldr r0, =ALARM_QTY
+    @ldr r5, [r0]
+    @sub r5, r5, #1
+    @str r5, [r0]
+    @mul r2, r5, r1                  @ arruma o endereco do vetor de callbacks
+    @
+    @ldr r1, =ALARM_VET
+    @add r1, r1, r2
+    @
+    @ldr r0, [r1]
+    @str r0, [r3]
+    @ldr r0, [r1, #4]
+    @str r0, [r3, #4]
+    @
+    @sub r4, r4, #1
 
     @msr CPSR_c, #0x10               @ USER mode
 
