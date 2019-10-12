@@ -7,3 +7,6 @@ test.in
 *.o
 *.out
 *.txt
+*.x
+disk.img
+*.asm
