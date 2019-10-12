@@ -3,3 +3,7 @@
 backup
 
 test.in
+*.img
+*.o
+*.out
+*.txt
